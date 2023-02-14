@@ -2,10 +2,8 @@
 
 ![build](https://img.shields.io/badge/build-passing-brightgreen)
 ![java](https://img.shields.io/badge/java-1.8-blue)
-![spring](https://img.shields.io/badge/spring--boot-2.7-green)
-![mybatis](https://img.shields.io/badge/mybatis--plus-3.4-8B0000)
 ![kafka](https://img.shields.io/badge/kafka-2.4.1-663399)
-![flink](https://img.shields.io/badge/flink-1.13.6-orange)
+![flink](https://img.shields.io/badge/flink-1.10-orange)
 
 ***
 杭二中大屏时段消费
