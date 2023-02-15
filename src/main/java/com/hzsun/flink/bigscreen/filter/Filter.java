@@ -1,15 +1,18 @@
 package com.hzsun.flink.bigscreen.filter;
 
 
+import com.hzsun.flink.bigscreen.kafka.DebeziumStruct;
 import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
 
 /**
- * @Description  主流过滤     debeziun  读 sql server cdc 版
+ * @Description  dml filter   针对 debezium MSSQL
  * @ClassName   Filter
  * @Date  2021/9/8 11:09
  * @Author   chenyongfeng
@@ -29,32 +32,68 @@ public class Filter {
             return false;
         }
 
-//        过滤非插入数据
+        //过滤非插入数据   测试：并未发现快照读r debezium默认不开启快照
         String opStyle = value.get("op").toString().replace("\"", "");
         if (!"c".equals(opStyle)) {
             return false;
         }
-//        处理标记判断  只取交易成功
+        //流水标志  只取1 交易成功
         JsonNode afterData = value.get("after");
         String  recFlag = afterData.get("RecFlag").toString().replace("\"", "");
         if (!"1".equals(recFlag)){
             return false;
         }
-//        过滤消费数据
+        //交易类型 只要 "50","98","100"  ？貌似是说有消费类型
         String feeNum = afterData.get("FeeNum").toString().replace("\"", "");
         if(!Arrays.asList(feeNumArr).contains(feeNum)){
             return false;
         }
-//        过滤食堂与超市
+        //商户账号   过滤不计算的食堂与超市
         String dealerNum = afterData.get("DealerNum").toString().replace("\"", "");
         if (!Arrays.asList(dealerNumArr).contains(dealerNum)){
             return false;
         }
-//        判断今天的数据     
-        Long time = Long.valueOf(afterData.get("DealTime").toString().replace("\"", ""));
-        if (time < TimestampsUtils.getTodayZeroPointTimestamps()) {
+
+////        判断今天的数据
+//        Long time = Long.valueOf(afterData.get("DealTime").toString().replace("\"", ""));
+//        if (time < TimestampsUtils.getTodayZeroPointTimestamps()) {
+//            return false;
+//        }
+
+        return true;
+    }
+
+    public static boolean debeFilter(DebeziumStruct value) {
+
+
+        if (value == null ){
             return false;
         }
+
+        //过滤非插入数据   测试：并未发现快照读r debezium默认不开启快照
+        //String opStyle = value.get("op").toString().replace("\"", "");
+        if (!"c".equals(value.getOp())) {
+            return false;
+        }
+        //流水标志  只取1 交易成功
+        //JsonNode afterData = value.get("after");
+        //String  recFlag = afterData.get("RecFlag").toString().replace("\"", "");
+        Map<String, Object> after = value.getAfter();
+
+        if (!("1".equals (after.get("RecFlag").toString()))){
+            return false;
+        }
+        //交易类型 只要 "50","98","100"  ？貌似是说有消费类型
+        //String feeNum = afterData.get("FeeNum").toString().replace("\"", "");
+        if(!Arrays.asList(feeNumArr).contains(after.get("FeeNum").toString())){
+            return false;
+        }
+        //商户账号   过滤不计算的食堂与超市
+        //String dealerNum = afterData.get("DealerNum").toString().replace("\"", "");
+        if (!Arrays.asList(dealerNumArr).contains(after.get("DealerNum").toString())){
+            return false;
+        }
+
 
         return true;
     }

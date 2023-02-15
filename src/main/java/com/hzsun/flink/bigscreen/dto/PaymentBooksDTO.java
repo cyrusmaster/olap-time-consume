@@ -1,5 +1,6 @@
 package com.hzsun.flink.bigscreen.dto;
 
+import lombok.AllArgsConstructor;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
 /**
@@ -9,6 +10,8 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.Obje
  * @Author   chenyongfeng
  * @ 遇事不决量子力学
  */
+
+ @AllArgsConstructor
 public class PaymentBooksDTO {
 
 //    卡户账号
@@ -24,16 +27,16 @@ public class PaymentBooksDTO {
 
 
 
-    public PaymentBooksDTO(JsonNode jsonNodes) {
-        JsonNode dataJson =  jsonNodes.get("after");
-
-        this.accNum = Integer.valueOf(dataJson.get("AccNum").toString().replace("\"", ""));
-        this.feeNum = Integer.valueOf(dataJson.get("FeeNum").toString().replace("\"", ""));
-        this.dealerNum = Integer.valueOf(dataJson.get("DealerNum").toString().replace("\"", ""));
-//         已经是北京时区的时间戳！！！  网站转换会多8h   得到真实需要减掉8h
-        this.dealTime = Long.valueOf(dataJson.get("DealTime").toString().replace("\"", "")) ;
-        this.recFlag = Integer.valueOf(dataJson.get("RecFlag").toString().replace("\"", ""));
-    }
+//    public PaymentBooksDTO(JsonNode jsonNodes) {
+//        JsonNode dataJson =  jsonNodes.get("after");
+//
+//        this.accNum = Integer.valueOf(dataJson.get("AccNum").toString().replace("\"", ""));
+//        this.feeNum = Integer.valueOf(dataJson.get("FeeNum").toString().replace("\"", ""));
+//        this.dealerNum = Integer.valueOf(dataJson.get("DealerNum").toString().replace("\"", ""));
+////         已经是北京时区的时间戳！！！  网站转换会多8h   得到真实需要减掉8h
+//        this.dealTime = Long.valueOf(dataJson.get("DealTime").toString().replace("\"", "")) ;
+//        this.recFlag = Integer.valueOf(dataJson.get("RecFlag").toString().replace("\"", ""));
+//    }
 
 
     @Override

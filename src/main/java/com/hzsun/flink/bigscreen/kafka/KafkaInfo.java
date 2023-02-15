@@ -11,7 +11,7 @@ import java.util.Properties;
 public class KafkaInfo {
 
 
-    private static FlinkKafkaConsumer<ObjectNode> flinkSource;
+    private static FlinkKafkaConsumer<DebeziumStruct> flinkSource;
 
     private static FlinkKafkaProducer<String> flinkSink;
 
@@ -29,11 +29,10 @@ public class KafkaInfo {
         properties.setProperty("bootstrap.servers",BOOTSTRAP_SOCKET);
 
 
-// 默认   getlast
+        // 默认   getlast
         flinkSource = new FlinkKafkaConsumer<>(SOURCE_TOPIC, new KafkaDeserialization(),properties);
-         flinkSource.setStartFromTimestamp(TimestampsUtils.getTimestamps());
-
-               //flinkSource.setStartFromEarliest();
+        flinkSource.setStartFromTimestamp(TimestampsUtils.getTimestamps());
+        //flinkSource.setStartFromEarliest();
 
 
 
@@ -46,7 +45,7 @@ public class KafkaInfo {
     }
 
 
-    public static FlinkKafkaConsumer<ObjectNode> getSource() {
+    public static FlinkKafkaConsumer<DebeziumStruct> getSource() {
         return flinkSource;
     }
 
