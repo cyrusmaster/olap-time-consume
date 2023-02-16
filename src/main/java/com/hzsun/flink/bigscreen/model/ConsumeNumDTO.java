@@ -1,4 +1,4 @@
-package com.hzsun.flink.bigscreen.dto;
+package com.hzsun.flink.bigscreen.model;
 
 import java.io.Serializable;
 

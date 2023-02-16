@@ -18,6 +18,7 @@ public class DebeziumStruct implements Serializable {
     private Map<String, Object> after;
     private Map<String, Object> source;
     private String op;
+    private String ts_ms;
 
 
 

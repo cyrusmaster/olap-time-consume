@@ -63,6 +63,7 @@ public class Filter {
         return true;
     }
 
+
     public static boolean debeFilter(DebeziumStruct value) {
 
 
@@ -71,25 +72,19 @@ public class Filter {
         }
 
         //过滤非插入数据   测试：并未发现快照读r debezium默认不开启快照
-        //String opStyle = value.get("op").toString().replace("\"", "");
         if (!"c".equals(value.getOp())) {
             return false;
         }
         //流水标志  只取1 交易成功
-        //JsonNode afterData = value.get("after");
-        //String  recFlag = afterData.get("RecFlag").toString().replace("\"", "");
         Map<String, Object> after = value.getAfter();
-
         if (!("1".equals (after.get("RecFlag").toString()))){
             return false;
         }
         //交易类型 只要 "50","98","100"  ？貌似是说有消费类型
-        //String feeNum = afterData.get("FeeNum").toString().replace("\"", "");
         if(!Arrays.asList(feeNumArr).contains(after.get("FeeNum").toString())){
             return false;
         }
         //商户账号   过滤不计算的食堂与超市
-        //String dealerNum = afterData.get("DealerNum").toString().replace("\"", "");
         if (!Arrays.asList(dealerNumArr).contains(after.get("DealerNum").toString())){
             return false;
         }

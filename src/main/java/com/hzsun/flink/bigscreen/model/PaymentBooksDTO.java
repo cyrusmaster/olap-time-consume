@@ -1,8 +1,7 @@
-package com.hzsun.flink.bigscreen.dto;
+package com.hzsun.flink.bigscreen.model;
 
 import lombok.AllArgsConstructor;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
+
 /**
  * @Description  表pojo
  * @ClassName   PaymentBooksDTO

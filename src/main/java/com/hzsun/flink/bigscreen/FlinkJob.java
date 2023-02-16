@@ -1,31 +1,19 @@
 package com.hzsun.flink.bigscreen;
 
-import com.hzsun.flink.bigscreen.dto.ConsumeNumDTO;
-import com.hzsun.flink.bigscreen.dto.PaymentBooksDTO;
 import com.hzsun.flink.bigscreen.filter.Filter;
 import com.hzsun.flink.bigscreen.kafka.DebeziumStruct;
 import com.hzsun.flink.bigscreen.kafka.KafkaInfo;
-import com.hzsun.flink.bigscreen.trigger.OneByOneTrigger;
-import com.hzsun.flink.bigscreen.utils.TimeJudge;
-import org.apache.flink.annotation.Public;
-import org.apache.flink.api.common.functions.FilterFunction;
-import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.hzsun.flink.bigscreen.trigger.FixedDelayTrigger;
+import org.apache.flink.api.common.functions.AggregateFunction;
+import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.streaming.api.TimeCharacteristic;
-import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
-import org.apache.flink.streaming.api.functions.windowing.AllWindowFunction;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
-import org.apache.flink.util.Collector;
-
+import org.apache.flink.streaming.api.windowing.triggers.ContinuousEventTimeTrigger;
+import org.apache.flink.streaming.api.windowing.triggers.ContinuousProcessingTimeTrigger;
 
 import java.util.HashSet;
 
@@ -51,31 +39,57 @@ public class FlinkJob {
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
         //2 source -> event stream
-        //ObjectMapper objectMapper = new ObjectMapper();
-        SingleOutputStreamOperator<DebeziumStruct> filter = env
+        SingleOutputStreamOperator<DebeziumStruct> mainStream = env
         .addSource(KafkaInfo.getSource())
                 .filter(Filter::debeFilter)
-                //.map(v -> new PaymentBooksDTO((Integer)v.getAfter().get("AccNum"),(Integer)v.getAfter().get("FeeNum"),
-                //(Integer)v.getAfter().get("DealerNum"),))
                 .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<DebeziumStruct>(Time.seconds(3)) {
                     @Override
                     public long extractTimestamp(DebeziumStruct debeziumStruct) {
-
-                        //if (debeziumStruct.getAfter().get("DealTime") != null) {
-                        //
-                        //}
-                        //String string = String.valueOf(debeziumStruct.getAfter().get("DealTime"));
-                        //long l = 1676422374000L;
                         return (long)debeziumStruct.getAfter().get("DealTime") ;
                     }
-                })
+                });
+
+        //分流 supermarketStream  滚动1d  做聚合  1s触发计算
+        SingleOutputStreamOperator<Integer> dealerNum = mainStream
+        .filter(t -> "1003".equals( t.getAfter().get("DealerNum")) || "1009".equals( t.getAfter().get("DealerNum")) )
+                .map(t ->(Integer)t.getAfter().get("AccNum"))
+                .windowAll(TumblingEventTimeWindows.of(Time.days(1),Time.hours(-8)))
+                        .trigger(ContinuousEventTimeTrigger.of(Time.seconds(5)))
+                        //.trigger(new FixedDelayTrigger())
+                                .reduce(new ReduceFunction<Integer>() {
+                                    @Override
+                                    public Integer reduce(Integer integer, Integer t1) throws Exception {
+                                        HashSet<Integer> integers = new HashSet<>();
+                                        integers.add(integer);
+                                        return null;
+                                    }
+                                });
+                        //        .aggregate(new AggregateFunction<DebeziumStruct, Integer, Integer>() {
+                        //            //创建累加器 初始化 最开始这个uv和pv的数值 一般默认是0。但是如果有的公司要作假可以加大。
+                        //            @Override
+                        //            public Integer createAccumulator() {
+                        //                return 0;
+                        //            }
+                        //            //数据增加逻辑
+                        //            @Override
+                        //            public Integer add(DebeziumStruct debeziumStruct, Integer o) {
+                        //
+                        //                return null;
+                        //            }
+                        //            // 根据 accumulator  计算结果
+                        //            @Override
+                        //            public Integer getResult(Integer o) {
+                        //                return null;
+                        //            }
+                        //
+                        //            @Override
+                        //            public Integer merge(Integer o, Integer acc1) {
+                        //                return null;
+                        //            }
+                        //        });
 
 
-                        ;
-
-
-
-        filter.print();
+        dealerNum.print();
         env.execute();
 
 //        // 1 source

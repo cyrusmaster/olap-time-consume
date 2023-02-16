@@ -4,13 +4,13 @@ import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 
-/**
- * @Description   流处理模式
- * @ClassName   OneByOneTrigger
- * @Date  2021/8/18 20:12
- * @Author   chenyongfeng
- * @ 遇事不决量子力学
- */
+
+ /**
+  * REMARK     每来一个事件触发
+  * @className   OneByOneTrigger
+  * @date  2023/2/16 15:17
+  * @author  cyf
+  */
 public class OneByOneTrigger extends Trigger<Object, TimeWindow> {
 
 
