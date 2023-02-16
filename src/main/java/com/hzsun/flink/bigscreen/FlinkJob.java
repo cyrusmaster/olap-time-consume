@@ -54,7 +54,6 @@ public class FlinkJob {
         //ObjectMapper objectMapper = new ObjectMapper();
         SingleOutputStreamOperator<DebeziumStruct> filter = env
         .addSource(KafkaInfo.getSource())
-                //.map( value -> objectMapper.readValue(value,DebeziumStruct.class))
                 .filter(Filter::debeFilter)
                 //.map(v -> new PaymentBooksDTO((Integer)v.getAfter().get("AccNum"),(Integer)v.getAfter().get("FeeNum"),
                 //(Integer)v.getAfter().get("DealerNum"),))
