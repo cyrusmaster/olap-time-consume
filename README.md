@@ -13,11 +13,18 @@
 
 
 ## reference
+
 https://nightlies.apache.org/flink/flink-docs-release-1.10/
-https://blog.csdn.net/weixin_40659514/article/details/127785140
-https://blog.csdn.net/u013411339/article/details/115475294
+
+[1s触发](https://blog.csdn.net/weixin_40659514/article/details/127785140)
+
+[evictor](https://blog.csdn.net/u013411339/article/details/115475294)
+
 https://www.jianshu.com/p/12ee78920148
+
 https://junyao.tech/posts/88fa2029.html
+
+https://blog.csdn.net/qq_40233706/article/details/103713735?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_baidulandingword~default-0-103713735-blog-107360613.pc_relevant_aa2&spm=1001.2101.3001.4242.1&utm_relevant_index=3
 ## Ver
 
 ***

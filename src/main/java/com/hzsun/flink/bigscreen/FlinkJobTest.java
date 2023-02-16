@@ -4,8 +4,6 @@ import com.hzsun.flink.bigscreen.filter.Filter;
 import com.hzsun.flink.bigscreen.kafka.DebeziumStruct;
 import com.hzsun.flink.bigscreen.kafka.KafkaInfo;
 import com.hzsun.flink.bigscreen.trigger.FixedDelayTrigger;
-import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
-import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -14,13 +12,7 @@ import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrderness
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.triggers.ContinuousEventTimeTrigger;
-import org.apache.flink.streaming.api.windowing.triggers.ContinuousProcessingTimeTrigger;
-import org.apache.flink.streaming.api.windowing.triggers.Trigger;
-import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
-import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashSet;
 
 
@@ -31,7 +23,7 @@ import java.util.HashSet;
  * @Author   chenyongfeng
  * @ 遇事不决量子力学
  */
-public class FlinkJob {
+public class FlinkJobTest {
     // todo 测试日志
     //private static final Logger LOG = LoggerFactory.getLogger(FlinkJob.class);
 
@@ -44,9 +36,6 @@ public class FlinkJob {
         // 10版本中 streaming programs need to set the time characteristic accordingly.
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-
-
-
         //2 source -> event stream
         SingleOutputStreamOperator<DebeziumStruct> mainStream = env
         .addSource(KafkaInfo.getSource())
@@ -54,12 +43,7 @@ public class FlinkJob {
                 .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<DebeziumStruct>(Time.seconds(3)) {
                     @Override
                     public long extractTimestamp(DebeziumStruct debeziumStruct) {
-                    SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-
-                        long  l = (long)debeziumStruct.getAfter().get("DealTime");
-
-                        System.out.println(TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
+                        System.out.println();
 
                         return (long)debeziumStruct.getAfter().get("DealTime") ;
                     }
@@ -71,36 +55,7 @@ HashSet<Integer> integers = new HashSet<>();
                 .map(t ->Integer.valueOf((String)t.getAfter().get("AccNum")))
                 .windowAll(TumblingEventTimeWindows.of(Time.days(1),Time.hours(-8)))
                         //.trigger(ContinuousEventTimeTrigger.of(Time.seconds(5)))
-                        .trigger(new Trigger<Integer, TimeWindow>() {
-                            @Override
-                            public TriggerResult onElement(Integer integer, long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-                                      //SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                                      //Date date = new Date(timeWindow.getStart());
-                                      //Date date1 = new Date(timeWindow.getEnd());
-                                      //Date date2 = new Date(triggerContext.getCurrentWatermark());
-                                      //System.out.println("wm:"+date2+"win:"+simpleDateFormat.format(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
-                                      return TriggerResult.CONTINUE;
-                            }
-
-                            @Override
-                            public TriggerResult onProcessingTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-                                return null;
-                            }
-
-                            @Override
-                            public TriggerResult onEventTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-                                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                                 Date date2 = new Date(triggerContext.getCurrentWatermark());
-                                 //System.out.println("wm:"+date2+"win:"+simpleDateFormat.format(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
-                                      return TriggerResult.FIRE;
-                                //return TriggerResult.FIRE;
-                            }
-
-                            @Override
-                            public void clear(TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-
-                            }
-                        })
+                        .trigger(new FixedDelayTrigger())
                                 .reduce(new ReduceFunction<Integer>() {
                                     @Override
                                     public Integer reduce(Integer integer, Integer t1) throws Exception {

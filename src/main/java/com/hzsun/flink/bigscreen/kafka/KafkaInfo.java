@@ -20,6 +20,7 @@ public class KafkaInfo {
     public static final String BOOTSTRAP_SOCKET = "192.168.254.157:9092";
 
     public static final String SOURCE_TOPIC = "sqlserver.dbo.ac_PaymentBooks";
+    //{"breakfastNum":1074,"lunchNum":1722,"dinnerNum":926,"supermarketNum":1410}
     public static final String SINK_TOPIC = "bigscreennum";
 
 
@@ -31,7 +32,8 @@ public class KafkaInfo {
 
         // 默认   getlast
         flinkSource = new FlinkKafkaConsumer<>(SOURCE_TOPIC, new KafkaDeserialization(),properties);
-        flinkSource.setStartFromTimestamp(TimestampsUtils.getTimestamps());
+        //flinkSource.setStartFromTimestamp(TimestampsUtils.getTimestamps());
+        flinkSource.setStartFromTimestamp(TimestampsUtils.getYestZeroPointL());
         //flinkSource.setStartFromEarliest();
 
 
