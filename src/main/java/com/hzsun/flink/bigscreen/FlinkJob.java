@@ -6,6 +6,7 @@ import com.hzsun.flink.bigscreen.kafka.KafkaInfo;
 import com.hzsun.flink.bigscreen.trigger.FixedDelayTrigger;
 import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
 import org.apache.flink.api.common.functions.AggregateFunction;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -59,16 +60,30 @@ public class FlinkJob {
 
                         long  l = (long)debeziumStruct.getAfter().get("DealTime");
 
-                        System.out.println(TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
+                        //System.out.println(TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
 
-                        return (long)debeziumStruct.getAfter().get("DealTime") ;
+                        return l ;
                     }
                 });
 HashSet<Integer> integers = new HashSet<>();
         //分流 supermarketStream  滚动1d  做聚合  1s触发计算
         SingleOutputStreamOperator<Integer> dealerNum = mainStream
         .filter(t -> "1003".equals( t.getAfter().get("DealerNum")) || "1009".equals( t.getAfter().get("DealerNum")) )
-                .map(t ->Integer.valueOf((String)t.getAfter().get("AccNum")))
+                .map(new MapFunction<DebeziumStruct, Integer>() {
+                    @Override
+                    public Integer map(DebeziumStruct debeziumStruct) throws Exception {
+                        Integer accNum = Integer.valueOf((String) debeziumStruct.getAfter().get("AccNum"));
+                        // 所有超市 消费的id
+                        long l = (Long) debeziumStruct.getAfter().get("DealTime");
+                        // 判断哪些 超出窗口
+                        //System.out.println(accNum +"|"+ TimestampsUtils.timeStampToTime(l));
+
+
+                        //System.out.println(accNum);
+                        return accNum;
+                    }
+                })
+                //.map(t ->Integer.valueOf((String)t.getAfter().get("AccNum")))
                 .windowAll(TumblingEventTimeWindows.of(Time.days(1),Time.hours(-8)))
                         //.trigger(ContinuousEventTimeTrigger.of(Time.seconds(5)))
                         .trigger(new Trigger<Integer, TimeWindow>() {
@@ -104,7 +119,9 @@ HashSet<Integer> integers = new HashSet<>();
                                 .reduce(new ReduceFunction<Integer>() {
                                     @Override
                                     public Integer reduce(Integer integer, Integer t1) throws Exception {
-
+                                        // 测试  前一位是数据个数(初始值是上一个元素) 后一位 是当前值
+                                        // 测试 结果 即使超出窗口也进行了计算
+                                        //System.out.println(integer +"|"+t1);
                                         integers.add(t1);
                                         return integers.size();
                                     }

@@ -32,9 +32,8 @@ public class KafkaInfo {
 
         // 默认   getlast
         flinkSource = new FlinkKafkaConsumer<>(SOURCE_TOPIC, new KafkaDeserialization(),properties);
-        //flinkSource.setStartFromTimestamp(TimestampsUtils.getTimestamps());
-        flinkSource.setStartFromTimestamp(TimestampsUtils.getYestZeroPointL());
-        //flinkSource.setStartFromEarliest();
+        flinkSource.setStartFromTimestamp(TimestampsUtils.getTimestamps());
+        //flinkSource.setStartFromTimestamp(TimestampsUtils.getYestZeroPointL());
 
 
 
