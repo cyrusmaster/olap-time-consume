@@ -18,13 +18,13 @@ import org.apache.flink.streaming.api.windowing.windows.Window;
   * @date  2023/2/16 15:17
   * @author  cyf  
   */ 
-public class FixedDelayTrigger extends Trigger<Integer, TimeWindow> {
+public class FixedDelayTrigger extends Trigger<Object, TimeWindow> {
 
 	 @Override
-	 public TriggerResult onElement(Integer debeziumStruct, long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
+	 public TriggerResult onElement(Object debeziumStruct, long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
 		 ValueState<Boolean> partitionedState = triggerContext.getPartitionedState(new ValueStateDescriptor<Boolean>("first-event", Types.BOOLEAN));
 		 if (partitionedState.value() == null) {
-			 for (long i = timeWindow.getStart(); i<timeWindow.getEnd(); i = i +1000L){
+			 for (long i = timeWindow.getStart(); i<timeWindow.getEnd(); i = i +2000L){
 			 	triggerContext.registerEventTimeTimer(i);
 			 }
 			 partitionedState.update(true);

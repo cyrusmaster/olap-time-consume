@@ -1,5 +1,6 @@
 package com.hzsun.flink.bigscreen.utils.wintest;
 
+import com.hzsun.flink.bigscreen.trigger.FixedDelayTrigger;
 import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
@@ -12,6 +13,7 @@ import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExt
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.streaming.api.windowing.triggers.ContinuousEventTimeTrigger;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
@@ -21,8 +23,9 @@ import java.time.Duration;
 
 /**
   * REMARK   1.10 水印窗口测试
-  *	测试1: trigger 触发计算方式
-  *	测试2: 事件时间 +8h 影响
+  *	测试1: 水印触发测试 (AscendingTimestampExtractor BoundedOutOfOrdernessTimestampExtractor)
+  *	测试2: 事件时间 +8h 影响  必须和win 时区一致(猜测)
+  *	测试3: trigger 触发计算方式
   * 最周测试: 统计的事件是否在当天窗口聚合,以及第二天重新计算(对于此场景 水印只影响零点前后统计 )
   * @className   WinTest
   * @date  2023/2/17 9:46
@@ -60,30 +63,46 @@ public class WinTest {
 		KeyedStream<Event, Integer> keyedStream =
 		eventDataStreamSource.keyBy(t -> t.getId());
 
-		//升序水印
+		//升序水印  et -1
 		//
-		SingleOutputStreamOperator<Event> watermarks = socket
+		SingleOutputStreamOperator<Event> ascendingwatermarks = socket
 		.assignTimestampsAndWatermarks(new AscendingTimestampExtractor<Event>() {
 			@Override
 			public long extractAscendingTimestamp(Event event) {
-				System.out.println("数据事件时间: "+TimestampsUtils.timeStampToTime(event.getTime()));
+				//System.out.println("数据事件时间: "+TimestampsUtils.timeStampToTime(event.getTime()));
 				return event.getTime();
 			}
 		});
 
 
-		//乱序水印
+		//乱序水印  et-允许乱序时间
+		SingleOutputStreamOperator<Event> outOfOrdernesswatermarks = socket
+			.assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<Event>(Time.seconds(1)) {
+				@Override
+				public long extractTimestamp(Event event) {
+				System.out.println("数据事件时间: "+TimestampsUtils.timeStampToTime(event.getTime()));
+					return event.getTime();
+				}
+			});
 
 
 
 
 
 
-
-
-		SingleOutputStreamOperator<Event> fee = watermarks
+				// 1默认窗口结束输出
+				// 2 以第一条et为基准叠加
+				//.trigger(ContinuousEventTimeTrigger.of(Time.minutes(1))
+		SingleOutputStreamOperator<Event> fee = outOfOrdernesswatermarks
 		.keyBy(Event::getId)
 				.window(TumblingEventTimeWindows.of(Time.minutes(5)))
+						//.trigger(ContinuousEventTimeTrigger.of(Time.minutes(2)))
+						.trigger(new FixedDelayTrigger())
+				.sum("fee");
+
+
+
+				//ContinuousProcessingTimeTrigger.of(Time.seconds(16))
 				//.trigger(new Trigger<Event, TimeWindow>() {
 				//	@Override
 				//	public TriggerResult onElement(Event event, long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
@@ -124,8 +143,8 @@ public class WinTest {
 				//		return new Event(9,3213,event.getFee()+t1.getFee());
 				//	}
 				//})
-				.sum("fee")
-				;
+				//.sum("fee")
+				//;
 
 				fee.print();
 
