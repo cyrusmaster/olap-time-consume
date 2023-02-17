@@ -4,6 +4,7 @@ import com.hzsun.flink.bigscreen.filter.Filter;
 import com.hzsun.flink.bigscreen.kafka.DebeziumStruct;
 import com.hzsun.flink.bigscreen.kafka.KafkaInfo;
 import com.hzsun.flink.bigscreen.trigger.FixedDelayTrigger;
+import com.hzsun.flink.bigscreen.trigger.OneByOneTrigger;
 import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
 import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -52,7 +53,7 @@ public class FlinkJob {
         SingleOutputStreamOperator<DebeziumStruct> mainStream = env
         .addSource(KafkaInfo.getSource())
                 .filter(Filter::debeFilter)
-                .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<DebeziumStruct>(Time.seconds(3)) {
+                .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<DebeziumStruct>(Time.milliseconds(1000L)) {
                     @Override
                     public long extractTimestamp(DebeziumStruct debeziumStruct) {
                     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -76,7 +77,7 @@ HashSet<Integer> integers = new HashSet<>();
                         // 所有超市 消费的id
                         long l = (Long) debeziumStruct.getAfter().get("DealTime");
                         // 判断哪些 超出窗口
-                        //System.out.println(accNum +"|"+ TimestampsUtils.timeStampToTime(l));
+                        System.out.println("win前 map|"+accNum +"| 原始"+ TimestampsUtils.timeStampToTime(l)+"| +8后"+TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
 
 
                         //System.out.println(accNum);
@@ -86,31 +87,31 @@ HashSet<Integer> integers = new HashSet<>();
                 //.map(t ->Integer.valueOf((String)t.getAfter().get("AccNum")))
                 .windowAll(TumblingEventTimeWindows.of(Time.days(1),Time.hours(-8)))
                         //.trigger(ContinuousEventTimeTrigger.of(Time.seconds(5)))
+                        //.trigger(new OneByOneTrigger()
+                        //)
                         .trigger(new Trigger<Integer, TimeWindow>() {
                             @Override
                             public TriggerResult onElement(Integer integer, long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-                                      //SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                                      //Date date = new Date(timeWindow.getStart());
-                                      //Date date1 = new Date(timeWindow.getEnd());
-                                      //Date date2 = new Date(triggerContext.getCurrentWatermark());
-                                      //System.out.println("wm:"+date2+"win:"+simpleDateFormat.format(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
-                                      return TriggerResult.CONTINUE;
+                                     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                                Date date2 = new Date(triggerContext.getCurrentWatermark());
+                                Date date3 = new Date(triggerContext.getCurrentProcessingTime());
+                                System.out.println("trigger中 wm: "+triggerContext.getCurrentWatermark()+" prss:"+date3);
+                                System.out.println("trigger中 win:"+TimestampsUtils.timeStampToTime(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
+                                return TriggerResult.CONTINUE;
                             }
-
                             @Override
                             public TriggerResult onProcessingTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
                                 return null;
                             }
-
                             @Override
                             public TriggerResult onEventTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
                                 SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                                 Date date2 = new Date(triggerContext.getCurrentWatermark());
-                                 //System.out.println("wm:"+date2+"win:"+simpleDateFormat.format(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
-                                      return TriggerResult.FIRE;
+                                Date date2 = new Date(triggerContext.getCurrentWatermark());
+                                Date date3 = new Date(triggerContext.getCurrentProcessingTime());
+                                //System.out.println("wm:"+date2+"prss:"+date3+"win:"+simpleDateFormat.format(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
+                                return TriggerResult.FIRE;
                                 //return TriggerResult.FIRE;
                             }
-
                             @Override
                             public void clear(TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
 
@@ -121,9 +122,10 @@ HashSet<Integer> integers = new HashSet<>();
                                     public Integer reduce(Integer integer, Integer t1) throws Exception {
                                         // 测试  前一位是数据个数(初始值是上一个元素) 后一位 是当前值
                                         // 测试 结果 即使超出窗口也进行了计算
-                                        //System.out.println(integer +"|"+t1);
-                                        integers.add(t1);
-                                        return integers.size();
+                                        System.out.println("reduce"+integer +"|"+t1);
+                                        //integers.add(t1);
+                                        //return integers.size();
+                                        return t1;
                                     }
                                 });
                         //        .aggregate(new AggregateFunction<DebeziumStruct, Integer, Integer>() {

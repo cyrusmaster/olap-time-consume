@@ -110,7 +110,13 @@ public class TimestampsUtils {
         return  now;
     }
 
-
+    /*
+     * REMARK   -8  拿到真实事件(同上)
+     * @methodName   getSubtract8hTimestamp
+     * @return java.lang.Long
+     * @date 2023/2/16 20:53
+     * @author cyf
+     */
   public static Long getSubtract8hTimestamp(long s){
 
 
@@ -122,10 +128,24 @@ public class TimestampsUtils {
     }
 
 
+    /*
+     * REMARK   造时间+8
+     * @methodName   plus8h
+     * @return java.lang.Long
+     * @date 2023/2/16 20:55
+     * @author cyf
+     */
+    public static Long plus8h(long l){
+        long eightSeconds = 1000 * 60 * 60 * 8;
+        Long now = l + eightSeconds;
+        return  now;
+    }
+
+
 
 
     public static void main(String[] args) {
-        System.out.println(getSubtract8hTimestamp(1676575599000l)
+        System.out.println(plus8h(1676595522000l)
         );
     }
 

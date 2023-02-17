@@ -15,8 +15,9 @@
         <flink.version>1.10.2</flink.version>
         <java.version>1.8</java.version>
         <scala.binary.version>2.12</scala.binary.version>
-        <slf4j.version>1.7.15</slf4j.version>
-        <log4j.version>2.17.1</log4j.version>
+        <slf4j.version>1.7.30</slf4j.version>
+        <log4j.version>1.2.17</log4j.version>
+        <log4j2.version>2.17.1</log4j2.version>
         <maven.test.skip>true</maven.test.skip>
     </properties>
 
@@ -46,24 +47,25 @@
             <artifactId>lombok</artifactId>
             <version>1.18.20</version>
         </dependency>
-        <!-- slf4j-->
+
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>${log4j2.version}</version>
+            <scope>provided</scope>
         </dependency>
-        <!--&lt;!&ndash;log4j &ndash;&gt;-->
-        <!--<dependency>-->
-        <!--    <groupId>org.slf4j</groupId>-->
-        <!--    <artifactId>slf4j-log4j12</artifactId>-->
-        <!--    <version>${slf4j.version}</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-        <!--  <groupId>org.apache.logging.log4j</groupId>-->
-        <!--  <artifactId>log4j-to-slf4j</artifactId>-->
-        <!--  <version>${log4j.version}</version>-->
-        <!--  &lt;!&ndash;<scope>runtime</scope>&ndash;&gt;-->
-        <!--</dependency>-->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>${log4j2.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>${log4j2.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
 
     </dependencies>
