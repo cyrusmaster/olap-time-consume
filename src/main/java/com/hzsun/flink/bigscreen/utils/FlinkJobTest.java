@@ -1,4 +1,4 @@
-package com.hzsun.flink.bigscreen;
+package com.hzsun.flink.bigscreen.utils;
 
 import com.hzsun.flink.bigscreen.filter.Filter;
 import com.hzsun.flink.bigscreen.kafka.DebeziumStruct;

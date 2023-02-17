@@ -57,10 +57,7 @@ public class FlinkJob {
                     @Override
                     public long extractTimestamp(DebeziumStruct debeziumStruct) {
                     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-
                         long  l = (long)debeziumStruct.getAfter().get("DealTime");
-
                         //System.out.println(TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
 
                         return l ;

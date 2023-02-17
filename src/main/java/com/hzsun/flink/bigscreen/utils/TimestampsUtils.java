@@ -1,6 +1,9 @@
 package com.hzsun.flink.bigscreen.utils;
 
+import org.apache.flink.api.common.time.Time;
+
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 
 public class TimestampsUtils {
 
@@ -16,7 +19,7 @@ public class TimestampsUtils {
     public static String timeStampToTime(long l){
 
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return l+" | "+simpleDateFormat.format(l) ;
+        return l+"|"+simpleDateFormat.format(l) ;
 
     }
 
@@ -49,7 +52,7 @@ public class TimestampsUtils {
      * @date 2023/2/16 19:13
      * @author cyf
      */
-    public static  Long getTimestamps(){
+    public static  Long getTodayZeroL(){
         long currentTimestamps = System.currentTimeMillis();
         long oneDayTimestamps = 60 * 60 * 24 * 1000;
         long eightTimestamps = 60 * 60 * 8 * 1000;
@@ -145,8 +148,17 @@ public class TimestampsUtils {
 
 
     public static void main(String[] args) {
-        System.out.println(plus8h(1676595522000l)
-        );
+        //System.out.println(plus8h(1676595522000l)
+        //
+        //
+        //);
+
+        //java
+        System.out.println(Duration.ofSeconds(3));
+        //flink api
+        //System.out.println(Time.days(1));
+        //flinkstram
+        //System.out.println(org.apache.flink.streaming.api.windowing.time.Time.days(1));
     }
 
 
