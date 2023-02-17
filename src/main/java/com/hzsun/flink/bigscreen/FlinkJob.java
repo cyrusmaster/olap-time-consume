@@ -58,8 +58,7 @@ public class FlinkJob {
                     public long extractTimestamp(DebeziumStruct debeziumStruct) {
                     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                         long  l = (long)debeziumStruct.getAfter().get("DealTime");
-                        //System.out.println(TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
-
+                        System.out.println(TimestampsUtils.timeStampToTime(l));
                         return l ;
                     }
                 });
@@ -74,7 +73,7 @@ HashSet<Integer> integers = new HashSet<>();
                         // 所有超市 消费的id
                         long l = (Long) debeziumStruct.getAfter().get("DealTime");
                         // 判断哪些 超出窗口
-                        System.out.println("win前 map|"+accNum +"| 原始"+ TimestampsUtils.timeStampToTime(l)+"| +8后"+TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
+                        //System.out.println("win前 map|"+accNum +"| 原始"+ TimestampsUtils.timeStampToTime(l)+"| +8后"+TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
 
 
                         //System.out.println(accNum);
@@ -92,8 +91,8 @@ HashSet<Integer> integers = new HashSet<>();
                                      SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                                 Date date2 = new Date(triggerContext.getCurrentWatermark());
                                 Date date3 = new Date(triggerContext.getCurrentProcessingTime());
-                                System.out.println("trigger中 wm: "+triggerContext.getCurrentWatermark()+" prss:"+date3);
-                                System.out.println("trigger中 win:"+TimestampsUtils.timeStampToTime(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
+                                //System.out.println("trigger中 wm: "+triggerContext.getCurrentWatermark()+" prss:"+date3);
+                                //System.out.println("trigger中 win:"+TimestampsUtils.timeStampToTime(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
                                 return TriggerResult.CONTINUE;
                             }
                             @Override
@@ -119,7 +118,7 @@ HashSet<Integer> integers = new HashSet<>();
                                     public Integer reduce(Integer integer, Integer t1) throws Exception {
                                         // 测试  前一位是数据个数(初始值是上一个元素) 后一位 是当前值
                                         // 测试 结果 即使超出窗口也进行了计算
-                                        System.out.println("reduce"+integer +"|"+t1);
+                                        //System.out.println("reduce"+integer +"|"+t1);
                                         //integers.add(t1);
                                         //return integers.size();
                                         return t1;

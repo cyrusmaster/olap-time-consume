@@ -11,11 +11,10 @@ import lombok.NonNull;
 @NoArgsConstructor
 public class Event {
 
-private int id;
+private Integer id;
 
-private long time;
+private Long time;
 
-private int fee;
-
+private Integer fee;
 
 }

@@ -1,6 +1,7 @@
 package com.hzsun.flink.bigscreen.kafka;
 
 
+import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.serialization.AbstractDeserializationSchema;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -8,6 +9,8 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMap
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @Description   Kafka数据反序列化  用于Consume&Flink 传参
@@ -32,9 +35,18 @@ public class KafkaDeserialization extends AbstractDeserializationSchema<Debezium
         DebeziumStruct result = null;
         try {
             result = mapper.readValue(message, DebeziumStruct.class);
-            //result = mapper.readValue(message, ObjectNode.class);
-            //result = new String(message);
-            //result2 = new DebeziumStruct(result.get("before"),result.get("after"),(result.get("source"),)
+
+            // eventTime-8 处理
+            Object dealTime = result.getAfter().get("DealTime");
+            Long dealTime1 = (Long) dealTime;
+            Long subtract8hTimestamp = TimestampsUtils.getSubtract8hTimestamp(dealTime1);
+
+            Map<String,Object> map = result.getAfter();
+            map.replace("DealTime",subtract8hTimestamp);
+            result.setAfter(map);
+
+
+
         } catch (Exception e) {
             message = "{\"op\": \"no\"}\n".getBytes();
             //result = new String(message);

@@ -9,11 +9,14 @@ import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
+import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
+
+import java.time.Duration;
 
 
 /**
@@ -35,7 +38,6 @@ public class WinTest {
 
 
 
-
 		// 1 source
 		//1,1676602800000,3   2,1676603800000,4  1,1676604800000,5
 		DataStreamSource<String> stringDataStreamSource = env.socketTextStream("172.16.67.40", 7777);
@@ -46,7 +48,6 @@ public class WinTest {
 				return new Event(Integer.parseInt(split[0]), Long.parseLong(split[1]), Integer.parseInt(split[2]));
 			}
 		});
-
 
 		DataStreamSource<Event> eventDataStreamSource = env.fromElements(
 				new Event(1, 1676602800000L,3),
@@ -59,7 +60,8 @@ public class WinTest {
 		KeyedStream<Event, Integer> keyedStream =
 		eventDataStreamSource.keyBy(t -> t.getId());
 
-		//  有序事件流  定义 event time watermark
+		//升序水印
+		//
 		SingleOutputStreamOperator<Event> watermarks = socket
 		.assignTimestampsAndWatermarks(new AscendingTimestampExtractor<Event>() {
 			@Override
@@ -68,6 +70,15 @@ public class WinTest {
 				return event.getTime();
 			}
 		});
+
+
+		//乱序水印
+
+
+
+
+
+
 
 
 		SingleOutputStreamOperator<Event> fee = watermarks

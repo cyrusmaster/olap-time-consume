@@ -9,6 +9,12 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.Objects;
 
+ /**
+  * REMARK    结构刨析  显然更加优雅  
+  * @className   DebeziumStruct
+  * @date  2023/2/17 22:05
+  * @author  cyf  
+  */ 
 @Data
 //@AllArgsConstructor
 //@NoArgsConstructor
