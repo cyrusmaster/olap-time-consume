@@ -9,10 +9,16 @@ import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
 import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
+import org.apache.flink.streaming.api.functions.windowing.ProcessAllWindowFunction;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.triggers.ContinuousEventTimeTrigger;
@@ -20,6 +26,8 @@ import org.apache.flink.streaming.api.windowing.triggers.ContinuousProcessingTim
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
+import org.apache.flink.util.Collector;
+import org.roaringbitmap.longlong.Roaring64Bitmap;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -47,83 +55,114 @@ public class FlinkJob {
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
 
-
-
-        //2 source -> event stream
-        SingleOutputStreamOperator<DebeziumStruct> mainStream = env
+        //2 source   - event stream   清洗过滤  旧版本水印API
+        SingleOutputStreamOperator<DebeziumStruct> eventStream = env
         .addSource(KafkaInfo.getSource())
                 .filter(Filter::debeFilter)
-                .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<DebeziumStruct>(Time.milliseconds(1000L)) {
+                .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<DebeziumStruct>(Time.milliseconds(3000L)) {
                     @Override
                     public long extractTimestamp(DebeziumStruct debeziumStruct) {
-                    SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                        long  l = (long)debeziumStruct.getAfter().get("DealTime");
+                        //1
+                        long  l = (long) debeziumStruct.getAfter().get("DealTime");
+                        //2
+                        //long l2 = Long.parseLong(String.valueOf(debeziumStruct.getAfter().get("DealTime")));
+                        // mark 测试et   观察乱序,是否适合做et
                         System.out.println(TimestampsUtils.timeStampToTime(l));
                         return l ;
                     }
                 });
-HashSet<Integer> integers = new HashSet<>();
-        //分流 supermarketStream  滚动1d  做聚合  1s触发计算
-        SingleOutputStreamOperator<Integer> dealerNum = mainStream
-        .filter(t -> "1003".equals( t.getAfter().get("DealerNum")) || "1009".equals( t.getAfter().get("DealerNum")) )
-                .map(new MapFunction<DebeziumStruct, Integer>() {
+        //  supermarket stream  AccNum 去重计算人数
+        eventStream.filter(t -> "1003".equals( t.getAfter().get("DealerNum")) || "1009".equals( t.getAfter().get("DealerNum")))
+                //.map(t -> (Integer)t.getAfter().get("AccNum"))
+                .windowAll(TumblingEventTimeWindows.of(Time.days(1),Time.hours(-8)))
+                .process(new ProcessAllWindowFunction<DebeziumStruct, Object, TimeWindow>() {
+                    ValueStateDescriptor<Roaring64Bitmap> bitmapDescriptor = new ValueStateDescriptor(
+                "Roaring64Bitmap",
+                TypeInformation.of(new TypeHint<Roaring64Bitmap>() {
+                }));
+                    private transient ValueState<Roaring64Bitmap> bitmapState;
                     @Override
-                    public Integer map(DebeziumStruct debeziumStruct) throws Exception {
-                        Integer accNum = Integer.valueOf((String) debeziumStruct.getAfter().get("AccNum"));
-                        // 所有超市 消费的id
-                        long l = (Long) debeziumStruct.getAfter().get("DealTime");
-                        // 判断哪些 超出窗口
-                        //System.out.println("win前 map|"+accNum +"| 原始"+ TimestampsUtils.timeStampToTime(l)+"| +8后"+TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
+                    public void open(Configuration parameters) throws Exception {
+                        bitmapState = getRuntimeContext().getState(bitmapDescriptor);
+                        super.open(parameters);
+                    }
 
-
-                        //System.out.println(accNum);
-                        return accNum;
+                    @Override
+                    public void process(ProcessAllWindowFunction<DebeziumStruct, Object, TimeWindow>.Context context, Iterable<DebeziumStruct> iterable, Collector<Object> collector) throws Exception {
+                        Roaring64Bitmap bitmap = bitmapState.value();
                     }
                 })
-                //.map(t ->Integer.valueOf((String)t.getAfter().get("AccNum")))
-                .windowAll(TumblingEventTimeWindows.of(Time.days(1),Time.hours(-8)))
-                        //.trigger(ContinuousEventTimeTrigger.of(Time.seconds(5)))
-                        //.trigger(new OneByOneTrigger()
-                        //)
-                        .trigger(new Trigger<Integer, TimeWindow>() {
-                            @Override
-                            public TriggerResult onElement(Integer integer, long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-                                     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                                Date date2 = new Date(triggerContext.getCurrentWatermark());
-                                Date date3 = new Date(triggerContext.getCurrentProcessingTime());
-                                //System.out.println("trigger中 wm: "+triggerContext.getCurrentWatermark()+" prss:"+date3);
-                                //System.out.println("trigger中 win:"+TimestampsUtils.timeStampToTime(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
-                                return TriggerResult.CONTINUE;
-                            }
-                            @Override
-                            public TriggerResult onProcessingTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-                                return null;
-                            }
-                            @Override
-                            public TriggerResult onEventTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-                                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                                Date date2 = new Date(triggerContext.getCurrentWatermark());
-                                Date date3 = new Date(triggerContext.getCurrentProcessingTime());
-                                //System.out.println("wm:"+date2+"prss:"+date3+"win:"+simpleDateFormat.format(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
-                                return TriggerResult.FIRE;
-                                //return TriggerResult.FIRE;
-                            }
-                            @Override
-                            public void clear(TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
+                ;
 
-                            }
-                        })
-                                .reduce(new ReduceFunction<Integer>() {
-                                    @Override
-                                    public Integer reduce(Integer integer, Integer t1) throws Exception {
-                                        // 测试  前一位是数据个数(初始值是上一个元素) 后一位 是当前值
-                                        // 测试 结果 即使超出窗口也进行了计算
-                                        //System.out.println("reduce"+integer +"|"+t1);
-                                        //integers.add(t1);
-                                        //return integers.size();
-                                        return t1;
-                                    }
-                                });
+
+
+
+
+
+
+
+//HashSet<Integer> integers = new HashSet<>();
+//        //分流 supermarketStream  滚动1d  做聚合  1s触发计算
+//        SingleOutputStreamOperator<Integer> dealerNum = mainStream
+//        .filter(t -> "1003".equals( t.getAfter().get("DealerNum")) || "1009".equals( t.getAfter().get("DealerNum")) )
+//                .map(new MapFunction<DebeziumStruct, Integer>() {
+//                    @Override
+//                    public Integer map(DebeziumStruct debeziumStruct) throws Exception {
+//                        Integer accNum = Integer.valueOf((String) debeziumStruct.getAfter().get("AccNum"));
+//                        // 所有超市 消费的id
+//                        long l = (Long) debeziumStruct.getAfter().get("DealTime");
+//                        // 判断哪些 超出窗口
+//                        //System.out.println("win前 map|"+accNum +"| 原始"+ TimestampsUtils.timeStampToTime(l)+"| +8后"+TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
+//
+//
+//                        //System.out.println(accNum);
+//                        return accNum;
+//                    }
+//                })
+//                //.map(t ->Integer.valueOf((String)t.getAfter().get("AccNum")))
+//                .windowAll(TumblingEventTimeWindows.of(Time.days(1),Time.hours(-8)))
+//                        //.trigger(ContinuousEventTimeTrigger.of(Time.seconds(5)))
+//                        //.trigger(new OneByOneTrigger()
+//                        //)
+//                        .trigger(new Trigger<Integer, TimeWindow>() {
+//                            @Override
+//                            public TriggerResult onElement(Integer integer, long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
+//                                     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+//                                Date date2 = new Date(triggerContext.getCurrentWatermark());
+//                                Date date3 = new Date(triggerContext.getCurrentProcessingTime());
+//                                //System.out.println("trigger中 wm: "+triggerContext.getCurrentWatermark()+" prss:"+date3);
+//                                //System.out.println("trigger中 win:"+TimestampsUtils.timeStampToTime(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
+//                                return TriggerResult.CONTINUE;
+//                            }
+//                            @Override
+//                            public TriggerResult onProcessingTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
+//                                return null;
+//                            }
+//                            @Override
+//                            public TriggerResult onEventTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
+//                                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+//                                Date date2 = new Date(triggerContext.getCurrentWatermark());
+//                                Date date3 = new Date(triggerContext.getCurrentProcessingTime());
+//                                //System.out.println("wm:"+date2+"prss:"+date3+"win:"+simpleDateFormat.format(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
+//                                return TriggerResult.FIRE;
+//                                //return TriggerResult.FIRE;
+//                            }
+//                            @Override
+//                            public void clear(TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
+//
+//                            }
+//                        })
+//                                .reduce(new ReduceFunction<Integer>() {
+//                                    @Override
+//                                    public Integer reduce(Integer integer, Integer t1) throws Exception {
+//                                        // 测试  前一位是数据个数(初始值是上一个元素) 后一位 是当前值
+//                                        // 测试 结果 即使超出窗口也进行了计算
+//                                        //System.out.println("reduce"+integer +"|"+t1);
+//                                        //integers.add(t1);
+//                                        //return integers.size();
+//                                        return t1;
+//                                    }
+//                                });
                         //        .aggregate(new AggregateFunction<DebeziumStruct, Integer, Integer>() {
                         //            //创建累加器 初始化 最开始这个uv和pv的数值 一般默认是0。但是如果有的公司要作假可以加大。
                         //            @Override
@@ -149,7 +188,7 @@ HashSet<Integer> integers = new HashSet<>();
                         //        });
 
 
-        dealerNum.print();
+        //dealerNum.print();
         env.execute();
 
 //        // 1 source

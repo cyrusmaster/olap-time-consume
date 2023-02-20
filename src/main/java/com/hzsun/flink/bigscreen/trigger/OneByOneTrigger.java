@@ -16,6 +16,9 @@ public class OneByOneTrigger extends Trigger<Object, TimeWindow> {
 
     @Override
     public TriggerResult onElement(Object element, long timestamp, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
+        // 触发计算并清除状态 会把内存累加清楚
+        //return TriggerResult.FIRE_AND_PURGE;
+
         return TriggerResult.FIRE;
     }
 
@@ -28,7 +31,6 @@ public class OneByOneTrigger extends Trigger<Object, TimeWindow> {
     public TriggerResult onEventTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
         return TriggerResult.CONTINUE;
     }
-
     @Override
     public void clear(TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
 

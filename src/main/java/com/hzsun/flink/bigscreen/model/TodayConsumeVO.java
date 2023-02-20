@@ -9,20 +9,20 @@ import java.io.Serializable;
  * @Author   chenyongfeng
  * @ 遇事不决量子力学
  */
-public class ConsumeNumDTO implements Serializable {
+public class TodayConsumeVO implements Serializable {
 
 
     private  Integer breakfastNum;
     private  Integer lunchNum;
     private  Integer dinnerNum;
     private  Integer supermarketNum;
-    private Long  time;
-    private Long  starttime;
-    private Long  endtime;
+    //private Long  time;
+    //private Long  starttime;
+    //private Long  endtime;
 
 
 
-    public ConsumeNumDTO() {
+    public TodayConsumeVO() {
         this.breakfastNum = 0;
         this.lunchNum = 0;
         this.dinnerNum = 0;
@@ -76,12 +76,12 @@ public class ConsumeNumDTO implements Serializable {
         this.supermarketNum = supermarketNum;
     }
 
-    public Long getTime() {
-        return time;
-    }
-
-    public void setTime(Long time) {
-        this.time = time;
-    }
+    //public Long getTime() {
+    //    return time;
+    //}
+    //
+    //public void setTime(Long time) {
+    //    this.time = time;
+    //}
 }
 

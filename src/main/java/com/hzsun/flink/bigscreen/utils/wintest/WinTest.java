@@ -1,6 +1,7 @@
 package com.hzsun.flink.bigscreen.utils.wintest;
 
 import com.hzsun.flink.bigscreen.trigger.FixedDelayTrigger;
+import com.hzsun.flink.bigscreen.trigger.OneByOneTrigger;
 import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
@@ -96,8 +97,8 @@ public class WinTest {
 		SingleOutputStreamOperator<Event> fee = outOfOrdernesswatermarks
 		.keyBy(Event::getId)
 				.window(TumblingEventTimeWindows.of(Time.minutes(5)))
-						.trigger(ContinuousEventTimeTrigger.of(Time.minutes(2)))
-						//.trigger(new FixedDelayTrigger())
+						//.trigger(ContinuousEventTimeTrigger.of(Time.minutes(2)))
+						.trigger(new OneByOneTrigger())
 				.sum("fee");
 
 

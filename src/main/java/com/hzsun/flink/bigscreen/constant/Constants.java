@@ -1,7 +1,7 @@
 package com.hzsun.flink.bigscreen.constant;
 
-import com.hzsun.flink.bigscreen.model.ConsumeNumDTO;
+//import com.hzsun.flink.bigscreen.model.ConsumeNumDTO;
 
 public class Constants {
-    public static final ConsumeNumDTO pre = new ConsumeNumDTO();
+    //public static final ConsumeNumDTO pre = new ConsumeNumDTO();
 }

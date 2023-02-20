@@ -8,6 +8,13 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
 
 import java.util.Properties;
 
+
+ /**
+  * REMARK   Kafka Consumer & Kafka Producer   
+  * @className   KafkaInfo
+  * @date  2023/2/20 15:40
+  * @author  cyf  
+  */ 
 public class KafkaInfo {
 
 
