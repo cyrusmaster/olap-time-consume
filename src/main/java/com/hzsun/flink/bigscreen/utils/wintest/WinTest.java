@@ -96,8 +96,8 @@ public class WinTest {
 		SingleOutputStreamOperator<Event> fee = outOfOrdernesswatermarks
 		.keyBy(Event::getId)
 				.window(TumblingEventTimeWindows.of(Time.minutes(5)))
-						//.trigger(ContinuousEventTimeTrigger.of(Time.minutes(2)))
-						.trigger(new FixedDelayTrigger())
+						.trigger(ContinuousEventTimeTrigger.of(Time.minutes(2)))
+						//.trigger(new FixedDelayTrigger())
 				.sum("fee");
 
 

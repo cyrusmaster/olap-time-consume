@@ -12,6 +12,7 @@ import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrderness
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.triggers.ContinuousEventTimeTrigger;
+import org.apache.flink.streaming.api.windowing.triggers.CountTrigger;
 
 import java.util.HashSet;
 
@@ -55,7 +56,7 @@ HashSet<Integer> integers = new HashSet<>();
                 .map(t ->Integer.valueOf((String)t.getAfter().get("AccNum")))
                 .windowAll(TumblingEventTimeWindows.of(Time.days(1),Time.hours(-8)))
                         //.trigger(ContinuousEventTimeTrigger.of(Time.seconds(5)))
-                        .trigger(new FixedDelayTrigger())
+                        .trigger(ContinuousEventTimeTrigger.of(Time.minutes(1)))
                                 .reduce(new ReduceFunction<Integer>() {
                                     @Override
                                     public Integer reduce(Integer integer, Integer t1) throws Exception {
