@@ -3,7 +3,8 @@ package com.hzsun.flink.bigscreen.utils;
 import org.apache.flink.api.common.time.Time;
 
 import java.text.SimpleDateFormat;
-import java.time.Duration;
+import java.time.*;
+import java.util.Date;
 
 public class TimestampsUtils {
 
@@ -154,11 +155,36 @@ public class TimestampsUtils {
         //);
 
         //java
-        System.out.println(Duration.ofSeconds(3));
+        //System.out.println(Duration.ofSeconds(3));
         //flink api
         //System.out.println(Time.days(1));
         //flinkstram
         //System.out.println(org.apache.flink.streaming.api.windowing.time.Time.days(1));
+
+
+    //    test
+
+        //1  2023-02-21 14:18:14  比实际多8  我要-8  得到早6点
+        Long l = 1676960294583L;
+        System.out.println(timeStampToTime(l));
+        //2 带时区时间
+        ZonedDateTime utc = Instant.ofEpochMilli(l).atZone(ZoneId.of("UTC"));
+        System.out.println(utc);
+        OffsetDateTime offsetDateTime = Instant.ofEpochMilli(l).atOffset(ZoneOffset.of("+8"));
+        System.out.println(offsetDateTime);
+        //3 时间计算
+        long l1 = utc.plusHours(-8).toInstant().toEpochMilli();
+        //Instant instant1 = offsetDateTime.plusHours(-8).toInstant();
+
+
+
+        //long l1 = instant.toEpochMilli();
+        //long l2 = instant1.toEpochMilli();
+
+        System.out.println(timeStampToTime(l1));
+        //System.out.println(timeStampToTime(l2));
+
+
     }
 
 

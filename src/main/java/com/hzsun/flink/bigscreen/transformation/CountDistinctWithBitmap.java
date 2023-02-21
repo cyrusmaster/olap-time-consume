@@ -18,7 +18,7 @@ import org.roaringbitmap.RoaringBitmap;
   * @date  2023/2/20 17:35
   * @author  cyf  
   */ 
-public class CountDistinctWithBitmap extends ProcessFunction<Tuple,Tuple1<Integer>,Tuple1<Long>> {
+public class CountDistinctWithBitmap extends ProcessFunction {
 
 	private ValueState<Tuple2<RoaringBitmap, Long>> state;
 
@@ -31,11 +31,16 @@ public class CountDistinctWithBitmap extends ProcessFunction<Tuple,Tuple1<Intege
 
 
 
+	//@Override
+	//public void processElement(Tuple1<Integer> in, Context context, Collector<Tuple1<Long>> out) throws Exception {
+	//
+	//}
+
+
 	@Override
-	public void processElement(Tuple1<Integer> in, Context context, Collector<Tuple1<Long>> out) throws Exception {
+	public void processElement(Object o, Context context, Collector collector) throws Exception {
 
 	}
-
 
 	@Override
 	public void onTimer(long timestamp, OnTimerContext ctx, Collector out) throws Exception {

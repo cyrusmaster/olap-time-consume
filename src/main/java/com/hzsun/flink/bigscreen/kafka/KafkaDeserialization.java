@@ -9,6 +9,9 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMap
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,7 +42,9 @@ public class KafkaDeserialization extends AbstractDeserializationSchema<Debezium
             // eventTime-8 处理
             Object dealTime = result.getAfter().get("DealTime");
             Long dealTime1 = (Long) dealTime;
-            Long subtract8hTimestamp = TimestampsUtils.getSubtract8hTimestamp(dealTime1);
+            ZonedDateTime utc = Instant.ofEpochMilli(dealTime1).atZone(ZoneId.of("UTC"));
+            long subtract8hTimestamp = utc.plusHours(-8).toInstant().toEpochMilli();
+            //Long subtract8hTimestamp = TimestampsUtils.getSubtract8hTimestamp(dealTime1);
 
             Map<String,Object> map = result.getAfter();
             map.replace("DealTime",subtract8hTimestamp);

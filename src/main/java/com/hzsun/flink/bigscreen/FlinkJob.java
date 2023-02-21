@@ -30,6 +30,7 @@ import org.apache.flink.util.Collector;
 import org.roaringbitmap.longlong.Roaring64Bitmap;
 
 import java.text.SimpleDateFormat;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.HashSet;
 
@@ -189,7 +190,12 @@ public class FlinkJob {
 
 
         //dealerNum.print();
-        env.execute();
+        //env.execute(FlinkJob.class.getSimpleName());
+
+        //ZoneOffset.of("+8")
+        System.out.println(FlinkJob.class.getSimpleName());
+
+
 
 //        // 1 source
 //        DataStream<PaymentBooksDTO> mainStream = env

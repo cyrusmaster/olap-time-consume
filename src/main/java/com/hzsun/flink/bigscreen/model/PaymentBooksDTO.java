@@ -2,6 +2,8 @@ package com.hzsun.flink.bigscreen.model;
 
 import lombok.AllArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * @Description  表pojo
  * @ClassName   PaymentBooksDTO
@@ -23,6 +25,11 @@ public class PaymentBooksDTO {
     private  Long dealTime;
 //流水标志               确定有效
     private Integer recFlag;
+
+    private LocalDateTime time;
+
+
+
 
 
 
