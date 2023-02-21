@@ -132,8 +132,13 @@ public class TimestampsUtils {
     }
 
 
+    public static long subtract8h(long l,int i){
+       ZonedDateTime utc = Instant.ofEpochMilli(l).atZone(ZoneId.of("UTC"));
+        return utc.plusHours(i).toInstant().toEpochMilli();
+    }
+
     /*
-     * REMARK   造时间+8
+     * REMARK   造时间+8  测试用
      * @methodName   plus8h
      * @return java.lang.Long
      * @date 2023/2/16 20:55
