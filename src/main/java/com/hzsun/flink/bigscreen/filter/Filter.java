@@ -2,14 +2,11 @@ package com.hzsun.flink.bigscreen.filter;
 
 
 import com.hzsun.flink.bigscreen.kafka.DebeziumStruct;
-import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * @Description  dml filter   针对 debezium MSSQL

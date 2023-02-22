@@ -15,12 +15,12 @@ public class TimeJudge {
 
 
 
-    public  static Long six = TimestampsUtils.getTodayZeroPointTimestamps() + sixTimestamps;
-    public  static Long nine = TimestampsUtils.getTodayZeroPointTimestamps() + nineTimestamps;
-    public  static Long eleven = TimestampsUtils.getTodayZeroPointTimestamps() + elevenTimestamps;
-    public  static Long thirteen = TimestampsUtils.getTodayZeroPointTimestamps() + thirteenTimestamps;
-    public  static Long sixteen = TimestampsUtils.getTodayZeroPointTimestamps() + sixteenTimestamps;
-    public  static Long nineteen = TimestampsUtils.getTodayZeroPointTimestamps() + nineteenTimestamps;
+    public  static Long six = TimeUtil.getTodayZeroPointTimestamps() + sixTimestamps;
+    public  static Long nine = TimeUtil.getTodayZeroPointTimestamps() + nineTimestamps;
+    public  static Long eleven = TimeUtil.getTodayZeroPointTimestamps() + elevenTimestamps;
+    public  static Long thirteen = TimeUtil.getTodayZeroPointTimestamps() + thirteenTimestamps;
+    public  static Long sixteen = TimeUtil.getTodayZeroPointTimestamps() + sixteenTimestamps;
+    public  static Long nineteen = TimeUtil.getTodayZeroPointTimestamps() + nineteenTimestamps;
 
 
     public static void main(String[] args) {

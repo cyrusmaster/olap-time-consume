@@ -1,7 +1,10 @@
 package com.hzsun.flink.bigscreen.model;
 
 import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -12,8 +15,10 @@ import java.time.LocalDateTime;
  * @ 遇事不决量子力学
  */
 
+@Data
  @AllArgsConstructor
-public class PaymentBooksDTO {
+ @NoArgsConstructor
+public class PaymentBooksDTO implements Serializable {
 
 //    卡户账号
     private Integer accNum;
@@ -24,7 +29,7 @@ public class PaymentBooksDTO {
 //    交易时间
     private  Long dealTime;
 //流水标志               确定有效
-    private Integer recFlag;
+    private transient Integer recFlag;
 
     private LocalDateTime time;
 
@@ -57,43 +62,5 @@ public class PaymentBooksDTO {
     }
 
 
-    public Integer getAccNum() {
-        return accNum;
-    }
 
-    public void setAccNum(Integer accNum) {
-        this.accNum = accNum;
-    }
-
-    public Integer getFeeNum() {
-        return feeNum;
-    }
-
-    public void setFeeNum(Integer feeNum) {
-        this.feeNum = feeNum;
-    }
-
-    public Integer getDealerNum() {
-        return dealerNum;
-    }
-
-    public void setDealerNum(Integer dealerNum) {
-        this.dealerNum = dealerNum;
-    }
-
-    public  Long getDealTime() {
-        return dealTime;
-    }
-
-    public void setDealTime(Long dealTime) {
-        this.dealTime = dealTime;
-    }
-
-    public Integer getRecFlag() {
-        return recFlag;
-    }
-
-    public void setRecFlag(Integer recFlag) {
-        this.recFlag = recFlag;
-    }
 }

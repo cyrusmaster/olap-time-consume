@@ -1,18 +1,11 @@
 package com.hzsun.flink.bigscreen.kafka;
 
 
-import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
-import org.apache.flink.annotation.PublicEvolving;
+import com.hzsun.flink.bigscreen.utils.TimeUtil;
 import org.apache.flink.api.common.serialization.AbstractDeserializationSchema;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -38,18 +31,12 @@ public class KafkaDeserialization extends AbstractDeserializationSchema<Debezium
         DebeziumStruct result = null;
         try {
             result = mapper.readValue(message, DebeziumStruct.class);
-
             // eventTime-8 处理
             Object dealTime = result.getAfter().get("DealTime");
-            Long dealTime1 = (Long) dealTime;
-            ZonedDateTime utc = Instant.ofEpochMilli(dealTime1).atZone(ZoneId.of("UTC"));
-            long subtract8hTimestamp = utc.plusHours(-8).toInstant().toEpochMilli();
-            //Long subtract8hTimestamp = TimestampsUtils.getSubtract8hTimestamp(dealTime1);
-
+            Long lomgTime = (Long) dealTime;
+            long l = TimeUtil.calTimestamp(lomgTime, -8);
             Map<String,Object> map = result.getAfter();
-            map.replace("DealTime",subtract8hTimestamp);
-            result.setAfter(map);
-
+            map.replace("DealTime",l);
 
 
         } catch (Exception e) {

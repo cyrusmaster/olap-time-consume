@@ -1,5 +1,7 @@
 package com.hzsun.flink.bigscreen.model;
 
+import lombok.Data;
+
 import java.io.Serializable;
 
 /**
@@ -9,6 +11,9 @@ import java.io.Serializable;
  * @Author   chenyongfeng
  * @ 遇事不决量子力学
  */
+
+
+@Data
 public class TodayConsumeVO implements Serializable {
 
 
@@ -16,9 +21,8 @@ public class TodayConsumeVO implements Serializable {
     private  Integer lunchNum;
     private  Integer dinnerNum;
     private  Integer supermarketNum;
-    //private Long  time;
-    //private Long  starttime;
-    //private Long  endtime;
+
+    private  long eventTime;
 
 
 
@@ -38,50 +42,9 @@ public class TodayConsumeVO implements Serializable {
                 ",\"lunchNum\":" + lunchNum +
                 ",\"dinnerNum\":" + dinnerNum +
                 ",\"supermarketNum\":" + supermarketNum +
-//                ",\"time\":" +Flin st +
-//                ",\"time\":" + time +
                 '}';
     }
 
 
-    public Integer getBreakfastNum() {
-        return breakfastNum;
-    }
-
-    public void setBreakfastNum(Integer breakfastNum) {
-        this.breakfastNum = breakfastNum;
-    }
-
-    public Integer getLunchNum() {
-        return lunchNum;
-    }
-
-    public void setLunchNum(Integer lunchNum) {
-        this.lunchNum = lunchNum;
-    }
-
-    public Integer getDinnerNum() {
-        return dinnerNum;
-    }
-
-    public void setDinnerNum(Integer dinnerNum) {
-        this.dinnerNum = dinnerNum;
-    }
-
-    public Integer getSupermarketNum() {
-        return supermarketNum;
-    }
-
-    public void setSupermarketNum(Integer supermarketNum) {
-        this.supermarketNum = supermarketNum;
-    }
-
-    //public Long getTime() {
-    //    return time;
-    //}
-    //
-    //public void setTime(Long time) {
-    //    this.time = time;
-    //}
 }
 

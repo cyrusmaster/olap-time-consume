@@ -1,14 +1,23 @@
 package com.hzsun.flink.bigscreen.utils;
 
-import org.apache.flink.api.common.time.Time;
-
 import java.text.SimpleDateFormat;
 import java.time.*;
-import java.util.Date;
 
-public class TimestampsUtils {
+public class TimeUtil {
 
-    
+
+
+
+    // 是否相同天
+
+    public static boolean isSameDay(long l1 , long l2){
+
+
+        LocalDate localDate = LocalDateTime.ofInstant(Instant.ofEpochMilli(l1), ZoneOffset.UTC).toLocalDate();
+        LocalDate localDate2 = LocalDateTime.ofInstant(Instant.ofEpochMilli(l2), ZoneOffset.UTC).toLocalDate();
+
+        return localDate.equals(localDate2);
+    }
 
     /*
      * REMARK    时间戳转换工具  等同  https://tool.lu/timestamp/
@@ -132,8 +141,15 @@ public class TimestampsUtils {
     }
 
 
-    public static long subtract8h(long l,int i){
-       ZonedDateTime utc = Instant.ofEpochMilli(l).atZone(ZoneId.of("UTC"));
+    /*
+     * REMARK  时间戳long计算
+     * @methodName   subtract8h
+     * @return long
+     * @date 2023/2/21 15:01
+     * @author cyf
+     */
+    public static long calTimestamp  (long l,int i){
+        ZonedDateTime utc = Instant.ofEpochMilli(l).atZone(ZoneId.of("UTC"));
         return utc.plusHours(i).toInstant().toEpochMilli();
     }
 
@@ -152,7 +168,6 @@ public class TimestampsUtils {
 
 
 
-
     public static void main(String[] args) {
         //System.out.println(plus8h(1676595522000l)
         //
@@ -167,27 +182,35 @@ public class TimestampsUtils {
         //System.out.println(org.apache.flink.streaming.api.windowing.time.Time.days(1));
 
 
-    //    test
+        //System.out.println(timeStampToTime(calTimestamp(1676960294583L,-8)));
+
+        // debe -> real
+        System.out.println(timeStampToTime(calTimestamp(1677064204000L,-8)));
+        // create  debe
+        System.out.println(calTimestamp(1677113754000L,8));
+
+        //当天
+        System.out.println(Instant.now().toEpochMilli());
+        System.out.println(LocalDateTime.ofInstant(Instant.ofEpochMilli(1677067273148L), ZoneOffset.UTC).toLocalDate());
+
+        System.out.println(isSameDay(1677060613000L,1677147013000L));
 
         //1  2023-02-21 14:18:14  比实际多8  我要-8  得到早6点
-        Long l = 1676960294583L;
-        System.out.println(timeStampToTime(l));
-        //2 带时区时间
-        ZonedDateTime utc = Instant.ofEpochMilli(l).atZone(ZoneId.of("UTC"));
-        System.out.println(utc);
-        OffsetDateTime offsetDateTime = Instant.ofEpochMilli(l).atOffset(ZoneOffset.of("+8"));
-        System.out.println(offsetDateTime);
-        //3 时间计算
-        long l1 = utc.plusHours(-8).toInstant().toEpochMilli();
-        //Instant instant1 = offsetDateTime.plusHours(-8).toInstant();
-
-
-
-        //long l1 = instant.toEpochMilli();
-        //long l2 = instant1.toEpochMilli();
-
-        System.out.println(timeStampToTime(l1));
-        //System.out.println(timeStampToTime(l2));
+        //Long l = 1676960294583L;
+        //System.out.println(timeStampToTime(l));
+        ////2 带时区时间
+        //ZonedDateTime utc = Instant.ofEpochMilli(l).atZone(ZoneId.of("UTC"));
+        //System.out.println(utc);
+        //OffsetDateTime offsetDateTime = Instant.ofEpochMilli(l).atOffset(ZoneOffset.of("+8"));
+        //System.out.println(offsetDateTime);
+        ////3 时间计算
+        //long l1 = utc.plusHours(-8).toInstant().toEpochMilli();
+        ////Instant instant1 = offsetDateTime.plusHours(-8).toInstant();
+        ////long l1 = instant.toEpochMilli();
+        ////long l2 = instant1.toEpochMilli();
+        //
+        //System.out.println(timeStampToTime(l1));
+        ////System.out.println(timeStampToTime(l2));
 
 
     }

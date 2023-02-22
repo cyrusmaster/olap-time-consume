@@ -1,10 +1,8 @@
 package com.hzsun.flink.bigscreen.utils.wintest;
 
-import com.hzsun.flink.bigscreen.trigger.FixedDelayTrigger;
 import com.hzsun.flink.bigscreen.trigger.OneByOneTrigger;
-import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
+import com.hzsun.flink.bigscreen.utils.TimeUtil;
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
@@ -14,12 +12,6 @@ import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExt
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.windowing.triggers.ContinuousEventTimeTrigger;
-import org.apache.flink.streaming.api.windowing.triggers.Trigger;
-import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
-import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
-
-import java.time.Duration;
 
 
 /**
@@ -81,7 +73,7 @@ public class WinTest {
 			.assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<Event>(Time.seconds(1)) {
 				@Override
 				public long extractTimestamp(Event event) {
-				System.out.println("数据事件时间: "+TimestampsUtils.timeStampToTime(event.getTime()));
+				System.out.println("数据事件时间: "+ TimeUtil.timeStampToTime(event.getTime()));
 					return event.getTime();
 				}
 			});

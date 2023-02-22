@@ -3,36 +3,41 @@ package com.hzsun.flink.bigscreen;
 import com.hzsun.flink.bigscreen.filter.Filter;
 import com.hzsun.flink.bigscreen.kafka.DebeziumStruct;
 import com.hzsun.flink.bigscreen.kafka.KafkaInfo;
-import com.hzsun.flink.bigscreen.trigger.FixedDelayTrigger;
-import com.hzsun.flink.bigscreen.trigger.OneByOneTrigger;
-import com.hzsun.flink.bigscreen.utils.TimestampsUtils;
-import org.apache.flink.api.common.functions.AggregateFunction;
+import com.hzsun.flink.bigscreen.model.TodayConsumeVO;
+import com.hzsun.flink.bigscreen.transformation.CountDistinctWithBitmap;
+import com.hzsun.flink.bigscreen.utils.TimeUtil;
+import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.common.functions.ReduceFunction;
+import org.apache.flink.api.common.state.StateTtlConfig;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.functions.windowing.ProcessAllWindowFunction;
+import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.evictors.TimeEvictor;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.triggers.ContinuousEventTimeTrigger;
-import org.apache.flink.streaming.api.windowing.triggers.ContinuousProcessingTimeTrigger;
+import org.apache.flink.streaming.api.windowing.triggers.CountTrigger;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 import org.roaringbitmap.longlong.Roaring64Bitmap;
+import org.roaringbitmap.longlong.Roaring64NavigableMap;
 
-import java.text.SimpleDateFormat;
-import java.time.ZoneOffset;
-import java.util.Date;
-import java.util.HashSet;
+
+import java.time.Instant;
+import java.util.Iterator;
 
 
 /**
@@ -48,13 +53,14 @@ public class FlinkJob {
 
 
     public static void main(String[] args) throws Exception{
-
+        TodayConsumeVO todayConsumeVO = new TodayConsumeVO();
+        todayConsumeVO.setEventTime(Instant.now().toEpochMilli());
+        int flag = 1;
         // 1定义环境
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env .setParallelism(1);
-        // 10版本中 streaming programs need to set the time characteristic accordingly.
+        // 10版本中 需要指定 默认process
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-
 
         //2 source   - event stream   清洗过滤  旧版本水印API
         SingleOutputStreamOperator<DebeziumStruct> eventStream = env
@@ -65,320 +71,116 @@ public class FlinkJob {
                     public long extractTimestamp(DebeziumStruct debeziumStruct) {
                         //1
                         long  l = (long) debeziumStruct.getAfter().get("DealTime");
+
+                        System.out.println(!TimeUtil.isSameDay(l,todayConsumeVO.getEventTime()));
+
+                        if (!TimeUtil.isSameDay(l,todayConsumeVO.getEventTime())){
+                            todayConsumeVO.setSupermarketNum(0);
+                            todayConsumeVO.setBreakfastNum(0);
+                            todayConsumeVO.setLunchNum(0);
+                            todayConsumeVO.setDinnerNum(0);
+                        }
+
+                        todayConsumeVO.setEventTime(l);
                         //2
                         //long l2 = Long.parseLong(String.valueOf(debeziumStruct.getAfter().get("DealTime")));
                         // mark 测试et   观察乱序,是否适合做et
-                        System.out.println(TimestampsUtils.timeStampToTime(l));
+                        //System.out.println(TimeUtil.timeStampToTime(l));
                         return l ;
                     }
                 });
-        //  supermarket stream  AccNum 去重计算人数
-        eventStream.filter(t -> "1003".equals( t.getAfter().get("DealerNum")) || "1009".equals( t.getAfter().get("DealerNum")))
-                //.map(t -> (Integer)t.getAfter().get("AccNum"))
-                .windowAll(TumblingEventTimeWindows.of(Time.days(1),Time.hours(-8)))
-                .process(new ProcessAllWindowFunction<DebeziumStruct, Object, TimeWindow>() {
-                    ValueStateDescriptor<Roaring64Bitmap> bitmapDescriptor = new ValueStateDescriptor(
-                "Roaring64Bitmap",
-                TypeInformation.of(new TypeHint<Roaring64Bitmap>() {
-                }));
-                    private transient ValueState<Roaring64Bitmap> bitmapState;
-                    @Override
-                    public void open(Configuration parameters) throws Exception {
-                        bitmapState = getRuntimeContext().getState(bitmapDescriptor);
-                        super.open(parameters);
-                    }
 
-                    @Override
-                    public void process(ProcessAllWindowFunction<DebeziumStruct, Object, TimeWindow>.Context context, Iterable<DebeziumStruct> iterable, Collector<Object> collector) throws Exception {
-                        Roaring64Bitmap bitmap = bitmapState.value();
-                    }
-                })
+
+
+        // supermarket stream  AccNum去重计算人数
+        SingleOutputStreamOperator<Tuple2<String,Integer>> supermarketStream = eventStream.filter(t -> "1003".equals(t.getAfter().get("DealerNum")) || "1009".equals(t.getAfter().get("DealerNum")))
+                .windowAll(TumblingEventTimeWindows.of(Time.days(1), Time.hours(-8)))
+                .trigger(ContinuousEventTimeTrigger.of(Time.seconds(10)))
+                .trigger(CountTrigger.of(1))
+                .process(new CountDistinctWithBitmap())
+                .map(t ->  Tuple2.of("supermarket", (Integer) t))
+                .returns(Types.TUPLE(Types.STRING,Types.INT))
                 ;
 
 
+        // canteenStream    复制流
+        SingleOutputStreamOperator<DebeziumStruct> canteenStream = eventStream.filter(t -> !"1003".equals(t.getAfter().get("DealerNum")) && !"1009".equals(t.getAfter().get("DealerNum")));
+        //eventStream.print();
+        //canteenStream.print();
+
+        // canteenStream-breakfastStream  6 、9   14-17
+        SingleOutputStreamOperator<Tuple2<String,Integer>> breakfastStream = canteenStream.windowAll(SlidingEventTimeWindows.of(Time.hours(3), Time.days(1), Time.hours(-2)))
+                .trigger(ContinuousEventTimeTrigger.of(Time.seconds(10)))
+                .trigger(CountTrigger.of(1))
+                .process(new CountDistinctWithBitmap())
+                .map(t ->  Tuple2.of("breakfastStream",(Integer)t))
+                .returns(Types.TUPLE(Types.STRING,Types.INT));
+        // canteenStream-lunchStream 11、13   19-21
+        SingleOutputStreamOperator<Tuple2<String,Integer>> lunchStream = canteenStream.windowAll(SlidingEventTimeWindows.of(Time.hours(2), Time.days(1), Time.hours(3)))
+                .trigger(ContinuousEventTimeTrigger.of(Time.seconds(10)))
+                .trigger(CountTrigger.of(1))
+                .process(new CountDistinctWithBitmap())
+                .map(t -> Tuple2.of("lunchStream",(Integer)t))
+                .returns(Types.TUPLE(Types.STRING,Types.INT));
+        // canteenStream-dinnerStream 16、19    0-3
+        SingleOutputStreamOperator<Tuple2<String,Integer>> dinnerStream = canteenStream.windowAll(SlidingEventTimeWindows.of(Time.hours(3),Time.days(1), Time.hours(8)))
+                .trigger(ContinuousEventTimeTrigger.of(Time.seconds(10)))
+                .trigger(CountTrigger.of(1))
+                .process(new CountDistinctWithBitmap())
+                .map(t -> Tuple2.of("dinnerStream",(Integer)t))
+                .returns(Types.TUPLE(Types.STRING,Types.INT));
+
+        // 合流
+        supermarketStream.union(breakfastStream)
+                .union(lunchStream)
+                        .union(dinnerStream)
+                                .map(new MapFunction<Tuple2<String, Integer>, TodayConsumeVO>() {
+
+
+                                    @Override
+                                    public TodayConsumeVO map(Tuple2<String, Integer> stringIntegerTuple2) throws Exception {
+
+                                        // 判断时间戳是否是同一天
+                                        switch (stringIntegerTuple2.f0){
+                                            case "supermarket":
+                                                System.out.println("supermarket"+stringIntegerTuple2.f1);
+                                                System.out.println("supermarket"+todayConsumeVO.getSupermarketNum());
+                                                todayConsumeVO.setSupermarketNum(stringIntegerTuple2.f1);
+                                            break;
+
+                                            case "breakfastStream":
+                                                System.out.println("breakfastStream"+stringIntegerTuple2.f1);
+                                                System.out.println("breakfastStream"+todayConsumeVO.getBreakfastNum());
+                                                todayConsumeVO.setBreakfastNum(stringIntegerTuple2.f1);
+                                            break;
+
+                                            case "lunchStream":
+                                            System.out.println("lunchStream"+stringIntegerTuple2.f1);
+                                            System.out.println("lunchStream"+todayConsumeVO.getLunchNum());
+                                                todayConsumeVO.setLunchNum(stringIntegerTuple2.f1);
+                                            break;
+
+                                            case "dinnerStream":
+                                            System.out.println("dinnerStream"+stringIntegerTuple2.f1);
+                                                todayConsumeVO.setDinnerNum(stringIntegerTuple2.f1);
+                                            break;
+                                        }
+
+                                        return todayConsumeVO;
+                                    }
+                                })
+                .map(TodayConsumeVO::toString)
+                .print()
+                        //.addSink(KafkaInfo.getProducer())
+                        ;
 
 
 
 
-
-
-//HashSet<Integer> integers = new HashSet<>();
-//        //分流 supermarketStream  滚动1d  做聚合  1s触发计算
-//        SingleOutputStreamOperator<Integer> dealerNum = mainStream
-//        .filter(t -> "1003".equals( t.getAfter().get("DealerNum")) || "1009".equals( t.getAfter().get("DealerNum")) )
-//                .map(new MapFunction<DebeziumStruct, Integer>() {
-//                    @Override
-//                    public Integer map(DebeziumStruct debeziumStruct) throws Exception {
-//                        Integer accNum = Integer.valueOf((String) debeziumStruct.getAfter().get("AccNum"));
-//                        // 所有超市 消费的id
-//                        long l = (Long) debeziumStruct.getAfter().get("DealTime");
-//                        // 判断哪些 超出窗口
-//                        //System.out.println("win前 map|"+accNum +"| 原始"+ TimestampsUtils.timeStampToTime(l)+"| +8后"+TimestampsUtils.timeStampToTime(TimestampsUtils.getSubtract8hTimestamp(l)));
-//
-//
-//                        //System.out.println(accNum);
-//                        return accNum;
-//                    }
-//                })
-//                //.map(t ->Integer.valueOf((String)t.getAfter().get("AccNum")))
-//                .windowAll(TumblingEventTimeWindows.of(Time.days(1),Time.hours(-8)))
-//                        //.trigger(ContinuousEventTimeTrigger.of(Time.seconds(5)))
-//                        //.trigger(new OneByOneTrigger()
-//                        //)
-//                        .trigger(new Trigger<Integer, TimeWindow>() {
-//                            @Override
-//                            public TriggerResult onElement(Integer integer, long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-//                                     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//                                Date date2 = new Date(triggerContext.getCurrentWatermark());
-//                                Date date3 = new Date(triggerContext.getCurrentProcessingTime());
-//                                //System.out.println("trigger中 wm: "+triggerContext.getCurrentWatermark()+" prss:"+date3);
-//                                //System.out.println("trigger中 win:"+TimestampsUtils.timeStampToTime(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
-//                                return TriggerResult.CONTINUE;
-//                            }
-//                            @Override
-//                            public TriggerResult onProcessingTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-//                                return null;
-//                            }
-//                            @Override
-//                            public TriggerResult onEventTime(long l, TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-//                                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//                                Date date2 = new Date(triggerContext.getCurrentWatermark());
-//                                Date date3 = new Date(triggerContext.getCurrentProcessingTime());
-//                                //System.out.println("wm:"+date2+"prss:"+date3+"win:"+simpleDateFormat.format(timeWindow.getStart()) + "---" + simpleDateFormat.format(timeWindow.getEnd()));
-//                                return TriggerResult.FIRE;
-//                                //return TriggerResult.FIRE;
-//                            }
-//                            @Override
-//                            public void clear(TimeWindow timeWindow, TriggerContext triggerContext) throws Exception {
-//
-//                            }
-//                        })
-//                                .reduce(new ReduceFunction<Integer>() {
-//                                    @Override
-//                                    public Integer reduce(Integer integer, Integer t1) throws Exception {
-//                                        // 测试  前一位是数据个数(初始值是上一个元素) 后一位 是当前值
-//                                        // 测试 结果 即使超出窗口也进行了计算
-//                                        //System.out.println("reduce"+integer +"|"+t1);
-//                                        //integers.add(t1);
-//                                        //return integers.size();
-//                                        return t1;
-//                                    }
-//                                });
-                        //        .aggregate(new AggregateFunction<DebeziumStruct, Integer, Integer>() {
-                        //            //创建累加器 初始化 最开始这个uv和pv的数值 一般默认是0。但是如果有的公司要作假可以加大。
-                        //            @Override
-                        //            public Integer createAccumulator() {
-                        //                return 0;
-                        //            }
-                        //            //数据增加逻辑
-                        //            @Override
-                        //            public Integer add(DebeziumStruct debeziumStruct, Integer o) {
-                        //
-                        //                return null;
-                        //            }
-                        //            // 根据 accumulator  计算结果
-                        //            @Override
-                        //            public Integer getResult(Integer o) {
-                        //                return null;
-                        //            }
-                        //
-                        //            @Override
-                        //            public Integer merge(Integer o, Integer acc1) {
-                        //                return null;
-                        //            }
-                        //        });
-
-
-        //dealerNum.print();
-        //env.execute(FlinkJob.class.getSimpleName());
-
-        //ZoneOffset.of("+8")
-        System.out.println(FlinkJob.class.getSimpleName());
+        env.execute(FlinkJob.class.getSimpleName());
 
 
 
-//        // 1 source
-//        DataStream<PaymentBooksDTO> mainStream = env
-//                .addSource(KafkaInfo.getSource())
-////               总体过滤
-//                .filter(new FilterFunction<ObjectNode>() {
-//                    @Override
-//                    public boolean filter(ObjectNode value) throws Exception {
-//                        return Filter.totalFilter(value);
-//                    }
-//                })
-//                .map(new MapFunction<ObjectNode, PaymentBooksDTO>() {
-//                    @Override
-//                    public PaymentBooksDTO map(ObjectNode jsonNodes) throws Exception {
-//                        return new PaymentBooksDTO(jsonNodes);
-//                    }
-//                })
-//                .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<PaymentBooksDTO>(Time.seconds(0)) {
-//                    @Override
-//                    public long extractTimestamp(PaymentBooksDTO  paymentBooksDTO) {
-//                        return paymentBooksDTO.getDealTime();
-//                    }
-//                });
-////        mainStream.print();
-//
-////        过滤食堂流
-//        DataStream <PaymentBooksDTO> canteenStream  = mainStream
-//                .filter(new FilterFunction<PaymentBooksDTO>() {
-//                            @Override
-//                            public boolean filter(PaymentBooksDTO paymentBooksDTO) throws Exception {
-//
-//                                if (paymentBooksDTO.getDealerNum() == 1003 || paymentBooksDTO.getDealerNum() == 1009) {
-//                                    return false;
-//                                }
-//                                return true;
-//                            }
-//                        }
-//                );
-////        canteenStream.print();
-//
-////        过滤超市流
-//        DataStream <PaymentBooksDTO>  supermarketStream = mainStream
-//                .filter(new FilterFunction<PaymentBooksDTO>() {
-//                            @Override
-//                            public boolean filter(PaymentBooksDTO paymentBooksDTO) throws Exception {
-//
-//
-//                                if (paymentBooksDTO.getDealerNum() == 1003 || paymentBooksDTO.getDealerNum() == 1009) {
-//                                    return true;
-//                                }else {
-//                                    return false;
-//                                }
-//                            }
-//                        }
-//
-//                );
-//
-////        supermarketStream.print();
-//
-//        //doConsumeNumCalc(canteenStream,supermarketStream);
-//        //时段消费
-//        env.execute("olap_time_consumption");
-//
-//    }
-
-//    private static void doConsumeNumCalc(DataStream<PaymentBooksDTO> canteenStream,DataStream<PaymentBooksDTO> supermarketStream) {
-//
-//
-////        交易时间
-//        DataStream<Tuple2<String,Long>> timeStream =  canteenStream
-//                .map(new MapFunction<PaymentBooksDTO, Tuple2<String, Long>>() {
-//                    @Override
-//                    public Tuple2<String, Long> map(PaymentBooksDTO paymentBooksDTO) throws Exception {
-//                        return new Tuple2<>("time",paymentBooksDTO.getDealTime());
-//                    }
-//                });
-//
-//
-////早
-//        DataStream<Tuple2<String, Integer>> breakfastStream = canteenStream
-//                .filter(new FilterFunction<PaymentBooksDTO>() {
-//                    @Override
-//                    public boolean filter(PaymentBooksDTO paymentBooksDTO) throws Exception {
-//                        if (TimeJudge.nine >= paymentBooksDTO.getDealTime() && TimeJudge.six <= paymentBooksDTO.getDealTime()) {
-//                            return true;
-//                        } else {
-//                            return false;
-//                        }
-//                    }
-//                })
-//                .windowAll(TumblingProcessingTimeWindows.of(Time.days(1), Time.hours(-8)))
-//                .trigger(new OneByOneTrigger())
-//                .apply(new AllWindowFunction<PaymentBooksDTO, Tuple2<String, Integer>, TimeWindow>() {
-//                    @Override
-//                    public void apply(TimeWindow window, Iterable<PaymentBooksDTO> values, Collector<Tuple2<String, Integer>> out) throws Exception {
-//                        HashSet<Integer> idSet = new HashSet<>();
-//                        for (PaymentBooksDTO ac : values) {
-//                            idSet.add(ac.getAccNum());
-//                        }
-//                        out.collect(new Tuple2<>("morning", idSet.size()));
-//                    }
-//                });
-//
-////        breakfastStream.print();
-//
-//
-////        中午
-//
-//
-//
-//        DataStream<Tuple2<String, Integer>> lunchStream = canteenStream
-//                .filter(new FilterFunction<PaymentBooksDTO>() {
-//                    @Override
-//                    public boolean filter(PaymentBooksDTO paymentBooksDTO) throws Exception {
-//                        if (TimeJudge.thirteen >= paymentBooksDTO.getDealTime() && TimeJudge.eleven <= paymentBooksDTO.getDealTime()) {
-//                            return true;
-//                        } else {
-//                            return false;
-//                        }
-//                    }
-//                })
-//                .windowAll(TumblingProcessingTimeWindows.of(Time.days(1), Time.hours(-8)))
-//                .trigger(new OneByOneTrigger())
-//                .apply(new AllWindowFunction<PaymentBooksDTO, Tuple2<String, Integer>, TimeWindow>() {
-//                    @Override
-//                    public void apply(TimeWindow window, Iterable<PaymentBooksDTO> values, Collector<Tuple2<String, Integer>> out) throws Exception {
-//                        Long st = window.getStart();
-//                        Long et = window.getEnd();
-//                        HashSet<Integer> idSet = new HashSet<>();
-//                        for (PaymentBooksDTO ac : values) {
-//                            idSet.add(ac.getAccNum());
-//                        }
-//                        out.collect(new Tuple2<>("noon", idSet.size()));
-//                    }
-//                });
-//
-//
-//
-//
-////        lunchStream.print();
-//
-////        晚
-//        DataStream<Tuple2<String, Integer>> dinnerStream = canteenStream
-//                .filter(new FilterFunction<PaymentBooksDTO>() {
-//                            @Override
-//                            public boolean filter(PaymentBooksDTO paymentBooksDTO) throws Exception {
-//                                if (TimeJudge.nineteen >= paymentBooksDTO.getDealTime() && TimeJudge.sixteen <= paymentBooksDTO.getDealTime()) {
-//                                    return true;
-//                                } else {
-//                                    return false;
-//                                }
-//                            }
-//                        }
-//                )
-//                .windowAll(TumblingProcessingTimeWindows.of(Time.days(1), Time.hours(-8)))
-//                .trigger(new OneByOneTrigger())
-//                .apply(new AllWindowFunction<PaymentBooksDTO, Tuple2<String, Integer>, TimeWindow>() {
-//                    @Override
-//                    public void apply(TimeWindow window, Iterable<PaymentBooksDTO> values, Collector<Tuple2<String, Integer>> out) throws Exception {
-//                        HashSet<Integer> idSet = new HashSet<>();
-//                        for (PaymentBooksDTO ac : values) {
-//                            idSet.add(ac.getAccNum());
-//                        }
-//                        out.collect(new Tuple2<>("night", idSet.size()));
-//                    }
-//                });
-////        dinnerStream.print();
-//
-//
-////       超市 人数
-//        DataStream<Tuple2<String, Integer>> supermarketNumStream = supermarketStream
-//                .windowAll(TumblingProcessingTimeWindows.of(Time.days(1), Time.hours(-8)))
-//                .trigger(new OneByOneTrigger())
-//                .apply(new AllWindowFunction<PaymentBooksDTO, Tuple2<String, Integer>, TimeWindow>() {
-//                    @Override
-//                    public void apply(TimeWindow window, Iterable<PaymentBooksDTO> values, Collector<Tuple2<String, Integer>> out) throws Exception {
-//                        HashSet<Integer> idSet = new HashSet<>();
-//                        for (PaymentBooksDTO ac : values) {
-//                            idSet.add(ac.getAccNum());
-//                        }
-//                        out.collect(new Tuple2<>("market", idSet.size()));
-//                    }
-//                });
 //
 ////        supermarketNumStream.print();
 //
