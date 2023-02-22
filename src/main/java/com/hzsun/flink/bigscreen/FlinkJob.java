@@ -48,7 +48,7 @@ import java.util.Iterator;
  * @ 遇事不决量子力学
  */
 public class FlinkJob {
-    // todo 测试日志
+    // todo
     //private static final Logger LOG = LoggerFactory.getLogger(FlinkJob.class);
 
 
