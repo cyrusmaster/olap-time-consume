@@ -25,9 +25,9 @@ public class KafkaInfo {
     public static final String ZOOKEEPER_SOCKET = "192.168.254.157:2181";
     public static final String BOOTSTRAP_SOCKET = "192.168.254.157:9092";
 
-    //public static final String SOURCE_TOPIC = "sqlserver.dbo.ac_PaymentBooks";
+    public static final String SOURCE_TOPIC = "sqlserver.dbo.ac_PaymentBooks";
     // test
-    public static final String SOURCE_TOPIC = "pay_test";
+    //public static final String SOURCE_TOPIC = "pay_test";
     //{"breakfastNum":1074,"lunchNum":1722,"dinnerNum":926,"supermarketNum":1410}
     public static final String SINK_TOPIC = "bigscreennum";
 
@@ -40,7 +40,7 @@ public class KafkaInfo {
         // 默认   getlast
         flinkSource = new FlinkKafkaConsumer<>(SOURCE_TOPIC, new KafkaDeserialization(),properties);
         flinkSource.setStartFromLatest();
-        //flinkSource.setStartFromTimestamp(TimeUtil.getTodayZeroL());
+        flinkSource.setStartFromTimestamp(TimeUtil.getTodayZeroL());
 
 
         //flinkSource.setStartFromTimestamp(TimestampsUtils.getYestZeroPointL());

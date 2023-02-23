@@ -54,8 +54,7 @@ public class FlinkJob {
 
     public static void main(String[] args) throws Exception{
         TodayConsumeVO todayConsumeVO = new TodayConsumeVO();
-        todayConsumeVO.setEventTime(Instant.now().toEpochMilli());
-        int flag = 1;
+
         // 1定义环境
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env .setParallelism(1);
@@ -72,16 +71,7 @@ public class FlinkJob {
                         //1
                         long  l = (long) debeziumStruct.getAfter().get("DealTime");
 
-                        System.out.println(!TimeUtil.isSameDay(l,todayConsumeVO.getEventTime()));
 
-                        if (!TimeUtil.isSameDay(l,todayConsumeVO.getEventTime())){
-                            todayConsumeVO.setSupermarketNum(0);
-                            todayConsumeVO.setBreakfastNum(0);
-                            todayConsumeVO.setLunchNum(0);
-                            todayConsumeVO.setDinnerNum(0);
-                        }
-
-                        todayConsumeVO.setEventTime(l);
                         //2
                         //long l2 = Long.parseLong(String.valueOf(debeziumStruct.getAfter().get("DealTime")));
                         // mark 测试et   观察乱序,是否适合做et
@@ -139,29 +129,31 @@ public class FlinkJob {
 
                                     @Override
                                     public TodayConsumeVO map(Tuple2<String, Integer> stringIntegerTuple2) throws Exception {
+                                        
 
+                                        
                                         // 判断时间戳是否是同一天
                                         switch (stringIntegerTuple2.f0){
                                             case "supermarket":
-                                                System.out.println("supermarket"+stringIntegerTuple2.f1);
-                                                System.out.println("supermarket"+todayConsumeVO.getSupermarketNum());
+                                                //System.out.println("supermarket"+stringIntegerTuple2.f1);
+                                                //System.out.println("supermarket"+todayConsumeVO.getSupermarketNum());
                                                 todayConsumeVO.setSupermarketNum(stringIntegerTuple2.f1);
                                             break;
 
                                             case "breakfastStream":
-                                                System.out.println("breakfastStream"+stringIntegerTuple2.f1);
-                                                System.out.println("breakfastStream"+todayConsumeVO.getBreakfastNum());
+                                                //System.out.println("breakfastStream"+stringIntegerTuple2.f1);
+                                                //System.out.println("breakfastStream"+todayConsumeVO.getBreakfastNum());
                                                 todayConsumeVO.setBreakfastNum(stringIntegerTuple2.f1);
                                             break;
 
                                             case "lunchStream":
-                                            System.out.println("lunchStream"+stringIntegerTuple2.f1);
-                                            System.out.println("lunchStream"+todayConsumeVO.getLunchNum());
+                                            //System.out.println("lunchStream"+stringIntegerTuple2.f1);
+                                            //System.out.println("lunchStream"+todayConsumeVO.getLunchNum());
                                                 todayConsumeVO.setLunchNum(stringIntegerTuple2.f1);
                                             break;
 
                                             case "dinnerStream":
-                                            System.out.println("dinnerStream"+stringIntegerTuple2.f1);
+                                            //System.out.println("dinnerStream"+stringIntegerTuple2.f1);
                                                 todayConsumeVO.setDinnerNum(stringIntegerTuple2.f1);
                                             break;
                                         }
