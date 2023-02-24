@@ -56,8 +56,10 @@ public class FlinkJob {
         TodayConsumeVO todayConsumeVO = new TodayConsumeVO();
 
         // 1定义环境
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env .setParallelism(1);
+
+        //final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
+        //env .setParallelism(1);
         // 10版本中 需要指定 默认process
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
@@ -162,7 +164,7 @@ public class FlinkJob {
                                     }
                                 })
                 .map(TodayConsumeVO::toString)
-                .print()
+                .print().setParallelism(1)
                         //.addSink(KafkaInfo.getProducer())
                         ;
 
