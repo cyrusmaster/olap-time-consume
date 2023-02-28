@@ -66,22 +66,20 @@ public class FlinkJob {
         //2 source   - event stream   清洗过滤  旧版本水印API
         SingleOutputStreamOperator<DebeziumStruct> eventStream = env
         .addSource(KafkaInfo.getSource())
-                .filter(Filter::debeFilter)
                 .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<DebeziumStruct>(Time.milliseconds(3000L)) {
                     @Override
                     public long extractTimestamp(DebeziumStruct debeziumStruct) {
                         //1
                         long  l = (long) debeziumStruct.getAfter().get("DealTime");
-
-
                         //2
                         //long l2 = Long.parseLong(String.valueOf(debeziumStruct.getAfter().get("DealTime")));
                         // mark 测试et   观察乱序,是否适合做et
-                        //System.out.println(TimeUtil.timeStampToTime(l));
+                        System.out.println(TimeUtil.timeStampToTime(l));
                         return l ;
                     }
-                });
+                }).filter(Filter::debeFilter);
 
+                //eventStream.print();
 
 
         // supermarket stream  AccNum去重计算人数
@@ -126,45 +124,53 @@ public class FlinkJob {
         supermarketStream.union(breakfastStream)
                 .union(lunchStream)
                         .union(dinnerStream)
-                                .map(new MapFunction<Tuple2<String, Integer>, TodayConsumeVO>() {
-
-
-                                    @Override
-                                    public TodayConsumeVO map(Tuple2<String, Integer> stringIntegerTuple2) throws Exception {
-                                        
-
-                                        
-                                        // 判断时间戳是否是同一天
-                                        switch (stringIntegerTuple2.f0){
-                                            case "supermarket":
-                                                //System.out.println("supermarket"+stringIntegerTuple2.f1);
-                                                //System.out.println("supermarket"+todayConsumeVO.getSupermarketNum());
-                                                todayConsumeVO.setSupermarketNum(stringIntegerTuple2.f1);
-                                            break;
-
-                                            case "breakfastStream":
-                                                //System.out.println("breakfastStream"+stringIntegerTuple2.f1);
-                                                //System.out.println("breakfastStream"+todayConsumeVO.getBreakfastNum());
-                                                todayConsumeVO.setBreakfastNum(stringIntegerTuple2.f1);
-                                            break;
-
-                                            case "lunchStream":
-                                            //System.out.println("lunchStream"+stringIntegerTuple2.f1);
-                                            //System.out.println("lunchStream"+todayConsumeVO.getLunchNum());
-                                                todayConsumeVO.setLunchNum(stringIntegerTuple2.f1);
-                                            break;
-
-                                            case "dinnerStream":
-                                            //System.out.println("dinnerStream"+stringIntegerTuple2.f1);
-                                                todayConsumeVO.setDinnerNum(stringIntegerTuple2.f1);
-                                            break;
-                                        }
-
-                                        return todayConsumeVO;
-                                    }
-                                })
-                .map(TodayConsumeVO::toString)
-                .print().setParallelism(1)
+                //.process(new ProcessFunction<Tuple2<String, Integer>, Object>() {
+                //    @Override
+                //    public void processElement(Tuple2<String, Integer> stringIntegerTuple2, ProcessFunction<Tuple2<String, Integer>, Object>.Context context, Collector<Object> collector) throws Exception {
+                //        collector.collect(TodayConsumeVO
+                //        .builder()
+                //                .supermarketNum(stringIntegerTuple2.f1).build());
+                //    }
+                //})
+                //                .map(new MapFunction<Tuple2<String, Integer>, TodayConsumeVO>() {
+                //
+                //
+                //                    @Override
+                //                    public TodayConsumeVO map(Tuple2<String, Integer> stringIntegerTuple2) throws Exception {
+                //
+                //                        // 判断时间戳是否是同一天
+                //                        switch (stringIntegerTuple2.f0){
+                //                            case "supermarket":
+                //                                //System.out.println("supermarket"+stringIntegerTuple2.f1);
+                //                                //System.out.println("supermarket"+todayConsumeVO.getSupermarketNum());
+                //                                todayConsumeVO.setSupermarketNum(stringIntegerTuple2.f1);
+                //
+                //                            break;
+                //
+                //                            case "breakfastStream":
+                //                                //System.out.println("breakfastStream"+stringIntegerTuple2.f1);
+                //                                //System.out.println("breakfastStream"+todayConsumeVO.getBreakfastNum());
+                //                                todayConsumeVO.setBreakfastNum(stringIntegerTuple2.f1);
+                //                            break;
+                //
+                //                            case "lunchStream":
+                //                            //System.out.println("lunchStream"+stringIntegerTuple2.f1);
+                //                            //System.out.println("lunchStream"+todayConsumeVO.getLunchNum());
+                //                                todayConsumeVO.setLunchNum(stringIntegerTuple2.f1);
+                //                            break;
+                //
+                //                            case "dinnerStream":
+                //                            //System.out.println("dinnerStream"+stringIntegerTuple2.f1);
+                //                                todayConsumeVO.setDinnerNum(stringIntegerTuple2.f1);
+                //                            break;
+                //                        }
+                //
+                //                        return todayConsumeVO;
+                //                    }
+                //                })
+                //.map(TodayConsumeVO::toString)
+                //.print()
+                //.setParallelism(1)
                         //.addSink(KafkaInfo.getProducer())
                         ;
 

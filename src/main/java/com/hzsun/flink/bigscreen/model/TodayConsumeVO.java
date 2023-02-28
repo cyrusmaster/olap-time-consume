@@ -1,5 +1,6 @@
 package com.hzsun.flink.bigscreen.model;
 
+import lombok.Builder;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -14,6 +15,7 @@ import java.io.Serializable;
 
 
 @Data
+//@Builder
 public class TodayConsumeVO implements Serializable {
 
 
@@ -22,7 +24,7 @@ public class TodayConsumeVO implements Serializable {
     private  Integer dinnerNum;
     private  Integer supermarketNum;
 
-    private  long eventTime;
+    private  Long eventTime;
 
 
 
@@ -31,7 +33,7 @@ public class TodayConsumeVO implements Serializable {
         this.lunchNum = 0;
         this.dinnerNum = 0;
         this.supermarketNum = 0;
-
+        this.eventTime = 0L;
     }
 
     @Override
